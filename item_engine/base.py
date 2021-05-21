@@ -12,11 +12,10 @@ INF = -1
 EOF = "EOF"
 
 __all__ = [
-    "INF", "EOF",
-    "Rule",
-    "Empty", "RuleUnit", "RuleList",
-    "Optional", "Repeat", "All", "Any",
-    "Match",
+    "INF", "EOF",  # constants
+    "Rule", "RuleUnit", "RuleList", "Empty",  # abstracts
+    "Optional", "Repeat", "All", "Any",  # composed
+    "Match", "VALID", "ERROR"  # simple
 ]
 
 
