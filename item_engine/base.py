@@ -762,3 +762,60 @@ class OPTIONS:
     @staticmethod
     def non_overlaping(elements: List[Element]):
         return all(not a.ol(b) for a in elements for b in elements if a is not b)
+
+
+def ANY(*args: Union[All, Any, Repeat, Optional, Match, Empty]):
+    rules: List[Union[All, Repeat, Optional, Match, Empty]] = []
+
+    for arg in args:
+        if isinstance(arg, All):
+            rules.extend(arg.rules)
+        else:
+            rules.append(arg)
+
+    if len(rules) == 1:
+        return rules[0]
+
+    return Any(*rules)
+
+
+def ALL(*args: Union[All, Any, Repeat, Optional, Match, Empty]):
+    rules: List[Union[Any, Repeat, Optional, Match, Empty]] = []
+
+    for arg in args:
+        if isinstance(arg, All):
+            rules.extend(arg.rules)
+        else:
+            rules.append(arg)
+
+    if len(rules) == 1:
+        return rules[0]
+
+    return All(*rules)
+
+
+def OPTIONAL(rule: Rule) -> Union[Repeat, Optional, Empty]:
+    if isinstance(rule, (Repeat, Optional)):
+        return rule
+    elif isinstance(rule, Empty):
+        return VALID
+    elif isinstance(rule, (All, Any, Match)):
+        return Optional(rule)
+    else:
+        raise TypeError(type(rule))
+
+
+def REPEAT(rule: Rule) -> Union[Repeat, Optional, Empty]:
+    if isinstance(rule, Repeat):
+        return rule
+    elif isinstance(rule, Optional):
+        return Repeat(rule.rule)
+    elif isinstance(rule, Empty):
+        return VALID
+    elif isinstance(rule, (All, Any, Match)):
+        return Repeat(rule)
+    else:
+        raise TypeError(type(rule))
+
+
+__all__ += ["ALL", "ANY", "REPEAT", "OPTIONAL"]
