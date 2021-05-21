@@ -1,7 +1,8 @@
 from typing import Tuple, Union, List, Optional
 
 from .. import Group, Match, Branch, All, INF, INCLUDE
-import python_generator as pg
+from python_generator import LAMBDA, VAR, IF, STR, BLOCK, ARG, SELF, CLASS, METHODS, DEF, AND, EXPRESSION, RETURN, FSTR, \
+    ARGS, IMPORT, EQ
 
 from .base_materials import Symbol, Keyword
 
@@ -9,17 +10,17 @@ __all__ = ["UNIT", "OP", "ENUM"]
 
 
 class UNIT:
-    def __init__(self, n: str, k: str, t: type, f: pg.LAMBDA = None):
+    def __init__(self, n: str, k: str, t: type, f: LAMBDA = None):
         assert t in (bool, int, float, str)
         self.n: str = n
         self.k: str = k
         self.t: type = t
-        self.f: Optional[pg.LAMBDA] = f
+        self.f: Optional[LAMBDA] = f
 
-    def pg_if(self, cls_name: str) -> pg.IF:
-        PARSE_FUNC = pg.VAR("parse")
-        E_CONTENT = pg.VAR("e").GETATTR("content")
-        E_VALUE = pg.VAR("e").GETATTR("value")
+    def pg_if(self, cls_name: str) -> IF:
+        PARSE_FUNC = VAR("parse")
+        E_CONTENT = VAR("e").GETATTR("content")
+        E_VALUE = VAR("e").GETATTR("value")
 
         if self.f is None:
             prem = []
@@ -28,36 +29,35 @@ class UNIT:
             prem = [PARSE_FUNC.ASSIGN(self.f)]
             arg = PARSE_FUNC.CALL(E_CONTENT)
 
-        return pg.IF(
-            E_VALUE.EQ(pg.STR(self.n)),
-            pg.BLOCK(
+        return IF(
+            E_VALUE.EQ(STR(self.n)),
+            BLOCK(
                 *prem,
-                pg.VAR(cls_name).CALL(
-                    pg.VAR(self.t.__name__).CALL(arg)
+                VAR(cls_name).CALL(
+                    VAR(self.t.__name__).CALL(arg)
                 ).RETURN()
             )
         )
 
-    def pg_class(self, cls_name: str) -> pg.CLASS:
-        args = [pg.ARG(k=self.k, t=self.t.__name__)]
+    def pg_class(self, cls_name: str) -> CLASS:
+        args = [ARG(k=self.k, t=self.t.__name__)]
 
-        SELF = pg.SELF
-        OTHER = pg.VAR("other")
+        OTHER = VAR("other")
 
-        return pg.CLASS(
+        return CLASS(
             name=cls_name,
             block=[
-                pg.METHODS.INIT(*args),
-                pg.METHODS.REPR(*args),
-                pg.DEF(
+                METHODS.INIT(*args),
+                METHODS.REPR(*args),
+                DEF(
                     name="__str__",
-                    args=pg.SELF,
-                    block=pg.VAR("str").CALL(SELF.GETATTR(self.k)).RETURN()
+                    args=SELF,
+                    block=VAR("str").CALL(SELF.GETATTR(self.k)).RETURN()
                 ),
-                pg.DEF(
+                DEF(
                     name="__eq__",
                     args=[SELF, OTHER],
-                    block=pg.AND(
+                    block=AND(
                         SELF.TYPE_OF.IS(OTHER.TYPE_OF),
                         SELF.GETATTR(self.k).EQ(OTHER.GETATTR(self.k))
                     ).RETURN()
@@ -72,7 +72,7 @@ class OP:
         self.childs: Tuple[Union[Group, Symbol, Keyword]] = childs
 
         self.matches: List[Match] = []
-        self.args: List[pg.EXPRESSION] = []
+        self.args: List[EXPRESSION] = []
         self.as_str: str = ""
 
         self.n = 0
@@ -82,7 +82,7 @@ class OP:
                 self.as_str += str(child).replace('{', '{{').replace('}', '}}')
             elif isinstance(child, Group):
                 self.matches.append(child.as_(f"c{self.n}"))
-                self.args.append(pg.VAR("build").CALL(pg.VAR("e").GETATTR("data").GETITEM(pg.STR(f'c{self.n}'))))
+                self.args.append(VAR("build").CALL(VAR("e").GETATTR("data").GETITEM(STR(f'c{self.n}'))))
                 self.as_str += f"{{self.c{self.n}!s}}"
                 self.n += 1
             else:
@@ -90,28 +90,28 @@ class OP:
 
     def pg_class(self, cls_name: str):
         keys = [f"c{i}" for i in range(self.n)]
-        args = [pg.ARG(key) for key in keys]
+        args = [ARG(key) for key in keys]
 
-        OTHER = pg.VAR("other")
+        OTHER = VAR("other")
 
-        return pg.CLASS(
+        return CLASS(
             name=cls_name,
             block=[
-                pg.METHODS.INIT(*args),
-                pg.METHODS.REPR(*args),
-                pg.DEF(
+                METHODS.INIT(*args),
+                METHODS.REPR(*args),
+                DEF(
                     name="__str__",
-                    args=pg.SELF,
+                    args=SELF,
                     block=[
-                        pg.RETURN(pg.FSTR(self.as_str))
+                        RETURN(FSTR(self.as_str))
                     ]
                 ),
-                pg.DEF(
+                DEF(
                     name="__eq__",
-                    args=[pg.SELF, OTHER],
-                    block=pg.AND(
-                        pg.SELF.TYPE_OF.IS(OTHER.TYPE_OF),
-                        *[pg.SELF.GETATTR(key).EQ(OTHER.GETATTR(key)) for key in keys]
+                    args=[SELF, OTHER],
+                    block=AND(
+                        SELF.TYPE_OF.IS(OTHER.TYPE_OF),
+                        *[SELF.GETATTR(key).EQ(OTHER.GETATTR(key)) for key in keys]
                     ).RETURN()
 
                 )
@@ -120,9 +120,9 @@ class OP:
 
     def pg_if(self, cls_name: str):
         br_name = f"__{cls_name.upper()}__"
-        return pg.IF(
-            pg.VAR("e").GETATTR("value").EQ(pg.STR(br_name)),
-            pg.VAR(cls_name).CALL(*self.args).RETURN()
+        return IF(
+            VAR("e").GETATTR("value").EQ(STR(br_name)),
+            VAR(cls_name).CALL(*self.args).RETURN()
         )
 
     def branch(self, cls_name: str):
@@ -140,43 +140,43 @@ class ENUM:
         self.g: Group = g
         self.s: Optional[Union[Symbol, Keyword]] = s
 
-    def pg_class(self, cls_name: str) -> pg.CLASS:
-        OTHER = pg.VAR("other")
+    def pg_class(self, cls_name: str) -> CLASS:
+        OTHER = VAR("other")
 
-        CS = pg.VAR("cs")
+        CS = VAR("cs")
 
-        return pg.CLASS(
+        return CLASS(
             name=cls_name,
             block=[
-                pg.DEF(
+                DEF(
                     name="__init__",
-                    args=pg.ARGS(pg.SELF, CS.AS_ARG),
-                    block=pg.SELF.SETATTR(CS, CS)
+                    args=ARGS(SELF, CS.AS_ARG),
+                    block=SELF.SETATTR(CS, CS)
                 ),
-                pg.DEF(
+                DEF(
                     name="__repr__",
-                    args=pg.SELF,
-                    block=pg.FSTR("{self.__class__.__name__}({', '.join(map(repr, self.cs))})").RETURN()
+                    args=SELF,
+                    block=FSTR("{self.__class__.__name__}({', '.join(map(repr, self.cs))})").RETURN()
                 ),
-                pg.DEF(
+                DEF(
                     name="__str__",
-                    args=pg.SELF,
-                    block=pg.STR("" if self.s is None else str(self.s)).GETATTR("join").CALL(
-                        pg.VAR("map").CALL("str", pg.SELF.GETATTR("cs"))
+                    args=SELF,
+                    block=STR("" if self.s is None else str(self.s)).GETATTR("join").CALL(
+                        VAR("map").CALL("str", SELF.GETATTR("cs"))
                     ).RETURN()
                 ),
-                pg.IMPORT.FROM("itertools", "starmap"),
-                pg.IMPORT.FROM("operator", "eq"),
-                pg.DEF(
+                IMPORT.FROM("itertools", "starmap"),
+                IMPORT.FROM("operator", "eq"),
+                DEF(
                     name="__eq__",
-                    args=[pg.SELF, OTHER],
-                    block=pg.AND(
-                        pg.SELF.TYPE_OF.IS(OTHER.TYPE_OF),
-                        pg.VAR("all").CALL(
-                            pg.VAR("starmap").CALL(
-                                pg.VAR("eq"),
-                                pg.VAR("zip").CALL(
-                                    pg.SELF.GETATTR("cs"),
+                    args=[SELF, OTHER],
+                    block=AND(
+                        SELF.TYPE_OF.IS(OTHER.TYPE_OF),
+                        VAR("all").CALL(
+                            VAR("starmap").CALL(
+                                VAR("eq"),
+                                VAR("zip").CALL(
+                                    SELF.GETATTR("cs"),
                                     OTHER.GETATTR("cs")
                                 )
                             )
@@ -186,12 +186,12 @@ class ENUM:
             ]
         )
 
-    def pg_if(self, cls_name: str) -> pg.IF:
+    def pg_if(self, cls_name: str) -> IF:
         br_name = f"__{cls_name.upper()}__"
-        return pg.IF(
-            pg.EQ(pg.VAR("e").GETATTR("value"), pg.STR(br_name)),
-            pg.VAR(cls_name).CALL(
-                pg.VAR("map").CALL("build", pg.VAR("e").GETATTR("data").GETITEM(pg.STR("cs"))).AS_ARG,
+        return IF(
+            EQ(VAR("e").GETATTR("value"), STR(br_name)),
+            VAR(cls_name).CALL(
+                VAR("map").CALL("build", VAR("e").GETATTR("data").GETITEM(STR("cs"))).AS_ARG,
             ).RETURN()
         )
 

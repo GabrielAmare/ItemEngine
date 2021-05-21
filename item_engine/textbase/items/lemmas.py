@@ -1,10 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import TypeVar, Union
-
-from .. import Element, INDEX, T_STATE, INCLUDE, EXCLUDE, CASE
-
-__all__ = ["Char", "Token", "Lemma"]
+from typing import Union, TypeVar
+from item_engine import Element, INCLUDE, CASE, EXCLUDE
+from .tokens import Token
 
 
 class HashableDict(dict):
@@ -14,32 +12,7 @@ class HashableDict(dict):
 
 E = TypeVar("E", bound=Element)
 
-
-@dataclass(frozen=True, order=True)
-class Char(Element):
-    @classmethod
-    def make(cls, at: INDEX, char: str):
-        return Char(at=at, to=at + 1, value=T_STATE(char))
-
-    def develop(self: E, case: CASE, item: Element) -> E:
-        raise Exception
-
-
-@dataclass(frozen=True, order=True)
-class Token(Element):
-    content: str = ""
-
-    def __str__(self):
-        return repr(self.content)
-
-    def develop(self: E, case: CASE, item: Char) -> E:
-        action, value = case
-        if action == INCLUDE:
-            return self.__class__(at=self.at, to=item.to, value=value, content=self.content + str(item.value))
-        elif action == EXCLUDE:
-            return self.__class__(at=self.at, to=self.to, value=value, content=self.content)
-        else:
-            raise ValueError(action)
+__all__ = ["Lemma"]
 
 
 @dataclass(frozen=True, order=True)

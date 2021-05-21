@@ -1,10 +1,11 @@
-from typing import Tuple, List, Dict, Type, Union
-import python_generator as pg
+from typing import Tuple, List, Dict, Type, Union, Optional, Iterable
 from .. import Branch, Group, Rule
 from .items import *
 from .functions import *
 from .base_materials import *
 from .operators import OP, UNIT, ENUM
+from python_generator import MODULE, CLASS, EXPRESSION, IMPORT, DEF, ARG, SWITCH, ISINSTANCE, EXCEPTION, BLOCK, SCOPE, \
+    STATEMENT
 
 __all__ = [
     "gen_symbols", "gen_keywords", "gen_branches", "gen_operators",
@@ -99,14 +100,17 @@ def gen_branches(**config) -> List[Branch]:
     return [Branch(name=key, rule=val) for key, val in config.items()]
 
 
-def gen_operators(**data: Dict[str, Union[UNIT, OP, ENUM]]) -> Tuple[List[Branch], pg.MODULE]:
+BLOCK_I = Optional[Union[BLOCK, SCOPE, STATEMENT, Iterable[STATEMENT]]]
+
+
+def gen_operators(**data: Dict[str, Union[UNIT, OP, ENUM]]) -> Tuple[List[Branch], MODULE]:
     branches: List[Branch] = []
 
-    classes_operators: List[pg.CLASS] = []
-    ifs_operators: List[Tuple[pg.EXPRESSION, pg.BLOCK_I]] = []
+    classes_operators: List[CLASS] = []
+    ifs_operators: List[Tuple[EXPRESSION, BLOCK_I]] = []
 
-    classes_units: List[pg.CLASS] = []
-    ifs_units: List[Tuple[pg.EXPRESSION, pg.BLOCK_I]] = []
+    classes_units: List[CLASS] = []
+    ifs_units: List[Tuple[EXPRESSION, BLOCK_I]] = []
 
     op_type: Type[Union[OP, UNIT, ENUM]]
 
@@ -123,25 +127,25 @@ def gen_operators(**data: Dict[str, Union[UNIT, OP, ENUM]]) -> Tuple[List[Branch
         else:
             raise ValueError(obj)
 
-    return branches, pg.MODULE("materials", [
-        pg.IMPORT.FROM("item_engine.textbase", "*"),
+    return branches, MODULE("materials", [
+        IMPORT.FROM("item_engine.textbase", "*"),
         *classes_units,
         *classes_operators,
-        pg.DEF(
+        DEF(
             name="build",
-            args=pg.ARG('e', t='Element'),
-            block=pg.SWITCH(
+            args=ARG('e', t='Element'),
+            block=SWITCH(
                 [
                     (
-                        pg.ISINSTANCE('e', t='Lemma'),
-                        pg.SWITCH(ifs_operators, pg.EXCEPTION('e.value').RAISE())
+                        ISINSTANCE('e', t='Lemma'),
+                        SWITCH(ifs_operators, EXCEPTION('e.value').RAISE())
                     ),
                     (
-                        pg.ISINSTANCE('e', t='Token'),
-                        pg.SWITCH(ifs_units, pg.EXCEPTION('e.value').RAISE())
+                        ISINSTANCE('e', t='Token'),
+                        SWITCH(ifs_units, EXCEPTION('e.value').RAISE())
                     )
                 ],
-                pg.EXCEPTION('e.value').RAISE()
+                EXCEPTION('e.value').RAISE()
             )
         )
     ])

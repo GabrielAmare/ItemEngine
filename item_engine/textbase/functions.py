@@ -2,7 +2,6 @@ from typing import Iterator
 
 from .. import *
 from .items import *
-from .elements import *
 
 __all__ = ["charset", "string", "make_characters", "make_branch_set"]
 

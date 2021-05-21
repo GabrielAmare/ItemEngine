@@ -1,6 +1,6 @@
 from typing import Iterator
 from tools37 import ReprTable
-from .elements import Token, Lemma
+from .items import Token, Lemma
 
 __all__ = ["rt_tokens", "rt_lemmas"]
 

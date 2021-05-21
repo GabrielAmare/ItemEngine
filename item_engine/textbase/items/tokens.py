@@ -1,11 +1,13 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Union, List
+from typing import Union, List, TypeVar
+from item_engine import Item, Group, Match, Element, INCLUDE, CASE, EXCLUDE
+from python_generator import VAR, CONDITION, TUPLE
+from .chars import Char
 
-from item_engine import Item, Group, Match
-import python_generator as pg
+E = TypeVar("E", bound=Element)
 
-__all__ = ["TokenI", "TokenG"]
+__all__ = ["TokenI", "TokenG", "Token"]
 
 
 class TokenG(Group):
@@ -13,9 +15,9 @@ class TokenG(Group):
     def items_str(self) -> str:
         return '\n'.join(map(repr, sorted([item.name for item in self.items])))
 
-    def condition(self, item: pg.VAR) -> pg.CONDITION:
+    def condition(self, item: VAR) -> CONDITION:
         items = tuple(sorted(map(str, self.items)))
-        grp = items[0] if len(self.items) == 1 else pg.TUPLE(items)
+        grp = items[0] if len(self.items) == 1 else TUPLE(items)
         return self.code_factory(item.GETATTR("value"), grp)
 
     def match(self, action: str) -> Match:
@@ -38,3 +40,20 @@ class TokenI(Item):
     @property
     def as_group(self) -> TokenG:
         return TokenG(frozenset({self}))
+
+
+@dataclass(frozen=True, order=True)
+class Token(Element):
+    content: str = ""
+
+    def __str__(self):
+        return repr(self.content)
+
+    def develop(self: E, case: CASE, item: Char) -> E:
+        action, value = case
+        if action == INCLUDE:
+            return self.__class__(at=self.at, to=item.to, value=value, content=self.content + str(item.value))
+        elif action == EXCLUDE:
+            return self.__class__(at=self.at, to=self.to, value=value, content=self.content)
+        else:
+            raise ValueError(action)
