@@ -20,47 +20,12 @@ __all__ = [
 ]
 
 
-class Can_Be_Splited:
-    @property
-    def splited(self) -> Iterator[Tuple[Match, Rule]]:
-        """
-            Split the rules by returning a Match followed by the remaining Rule after the Match
-        """
-        if isinstance(self, Empty):
-            yield Match(group=Group(inverted=self.valid), action=EXCLUDE), self
-        elif isinstance(self, Optional):
-            for first, after in self.rule.splited:
-                yield first, after
-        elif isinstance(self, Repeat):
-            for first, after in self.rule.splited:
-                yield first, after & self
-        elif isinstance(self, All):
-            for rule_first, rule_after in self.decompose:
-                for first, after in rule_first.splited:
-                    yield first, after & rule_after
-        elif isinstance(self, Any):
-            for rule in self.rules:
-                for first, after in rule.splited:
-                    yield first, after
-        elif isinstance(self, Match):
-            yield self, VALID
-            yield Match(~self.group, EXCLUDE), ERROR
-        elif isinstance(self, Branch):
-            for first, after in self.rule.splited:
-                yield first, after
-
-            if self.rule.is_skipable:
-                yield Match(group=Group.always(), action=EXCLUDE), VALID
-        else:
-            raise ValueError(self)
-
-
 ########################################################################################################################
 # Rule
 ########################################################################################################################
 
 @dataclass(frozen=True, order=True)
-class Rule(Can_Be_Splited):
+class Rule:
     def repeat(self, mn: int = 0, mx: int = INF) -> Rule:
         assert mn >= 0
         assert mx == -1 or (mx >= mn and mx > 0)
@@ -133,6 +98,10 @@ class Rule(Can_Be_Splited):
     def is_error(self) -> bool:
         raise NotImplementedError
 
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        raise NotImplementedError
+
 
 ########################################################################################################################
 # Empty | RuleUnit | RuleList
@@ -158,6 +127,10 @@ class Empty(Rule):
     def alphabet(self) -> FrozenSet[Item]:
         return frozenset()
 
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        yield Match(group=Group(inverted=self.valid), action=EXCLUDE), self
+
 
 VALID = Empty(True)
 ERROR = Empty(False)
@@ -175,6 +148,10 @@ class RuleUnit(Rule):
 
     @property
     def is_error(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
         raise NotImplementedError
 
     rule: Rule
@@ -196,6 +173,10 @@ class RuleList(Rule):
 
     @property
     def is_error(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
         raise NotImplementedError
 
     rules: Tuple[Rule, ...]
@@ -232,6 +213,11 @@ class Optional(RuleUnit):
     def is_error(self) -> bool:
         return False
 
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        for first, after in self.rule.splited:
+            yield first, after
+
 
 @dataclass(frozen=True, order=True)
 class Repeat(RuleUnit):
@@ -249,6 +235,11 @@ class Repeat(RuleUnit):
     @property
     def is_error(self) -> bool:
         return False
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        for first, after in self.rule.splited:
+            yield first, after & self
 
 
 @dataclass(frozen=True, order=True)
@@ -276,6 +267,12 @@ class All(RuleList):
     def is_error(self) -> bool:
         return len(self.rules) == 1 and self.rules[0].is_error
 
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        for rule_first, rule_after in self.decompose:
+            for first, after in rule_first.splited:
+                yield first, after & rule_after
+
     def __str__(self):
         return " & ".join(map(str, self.rules))
 
@@ -296,6 +293,12 @@ class Any(RuleList):
     @property
     def is_error(self) -> bool:
         return all(rule.is_error for rule in self.rules)
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        for rule in self.rules:
+            for first, after in rule.splited:
+                yield first, after
 
 
 ########################################################################################################################
@@ -328,6 +331,11 @@ class Match(Rule):
     @property
     def is_error(self) -> bool:
         return False
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        yield self, VALID
+        yield Match(~self.group, EXCLUDE), ERROR
 
 
 __all__ += ["Item", "Group"]
@@ -396,7 +404,7 @@ __all__ += ["Branch", "BranchSet"]
 ########################################################################################################################
 
 @dataclass(frozen=True, order=True)
-class Branch(GenericItem, Can_Be_Splited):
+class Branch(GenericItem):
     name: str
     rule: Rule
     priority: int = 0
@@ -427,6 +435,14 @@ class Branch(GenericItem, Can_Be_Splited):
     @property
     def is_error(self) -> bool:
         return self.rule.is_error
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        for first, after in self.rule.splited:
+            yield first, after
+
+        if self.rule.is_skipable:
+            yield Match(group=Group.always(), action=EXCLUDE), VALID
 
 
 class BranchSet(GenericItemSet[Branch]):
