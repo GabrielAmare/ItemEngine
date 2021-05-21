@@ -16,6 +16,8 @@ from tools37 import CsvFile
 from graph37 import Node
 from .BuilderGraph import BuilderGraph
 
+DEBUG_GROUP_TO_OUTCOME = False
+
 __all__ = ["Parser", "Engine"]
 
 
@@ -49,11 +51,12 @@ class GroupToOutcome(Dict[Group, Outcome]):
         data = []
         for branch in branch_set.items:
             for first, after in branch.splited:
-                # data.append([str(branch), str(first.group), str(first.action), str(after)])
+                data.append([str(branch), str(first.group), str(first.action), str(after)])
                 self.add(first.group, first.action, branch.new_rule(after))
 
-        # from tools37 import ReprTable
-        # print(str(ReprTable(data)))
+        if DEBUG_GROUP_TO_OUTCOME:
+            from tools37 import ReprTable
+            print(str(ReprTable(data)))
 
         return self
 
