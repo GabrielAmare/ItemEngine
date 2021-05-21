@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, replace
-from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Generic, Type
+from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Generic, Type, Union
 from functools import reduce
 from operator import and_
 
@@ -20,31 +20,9 @@ __all__ = [
 ]
 
 
-class HasAlphabet:
-    @property
-    def alphabet(self) -> FrozenSet[Item]:
-        """
-            Return a frozenset containing all the explicit items of a given rule
-            It is possible that an item matches a rule without being in it's alphabet,
-            this case occurs when the rule contains at some level a Match which has an inverted Group.
-        """
-        if isinstance(self, Empty):
-            return frozenset()
-        elif isinstance(self, (RuleUnit, Branch)):
-            return self.rule.alphabet
-        elif isinstance(self, RuleList):
-            return frozenset({item for rule in self.rules for item in rule.alphabet})
-        elif isinstance(self, Match):
-            return self.group.items
-        elif isinstance(self, BranchSet):
-            return frozenset({item for branch in self.items for item in branch.alphabet})
-        else:
-            raise TypeError(type(self))
-
-
 class HasState:
     @property
-    def is_valid(self) -> bool:
+    def is_valid(self: Union[Empty, All, Any, Branch, Element]) -> bool:
         """Return True when a Rule is valid"""
         if isinstance(self, Empty):
             return self.valid
@@ -137,7 +115,11 @@ class Can_Be_Splited:
 ########################################################################################################################
 
 @dataclass(frozen=True, order=True)
-class Rule(HasAlphabet, HasState, Can_Be_Splited):
+class Rule(HasState, Can_Be_Splited):
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        raise NotImplementedError
+
     def repeat(self, mn: int = 0, mx: int = INF) -> Rule:
         assert mn >= 0
         assert mx == -1 or (mx >= mn and mx > 0)
@@ -203,6 +185,10 @@ class Rule(HasAlphabet, HasState, Can_Be_Splited):
 class Empty(Rule):
     valid: bool
 
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return frozenset()
+
 
 VALID = Empty(True)
 ERROR = Empty(False)
@@ -211,6 +197,10 @@ ERROR = Empty(False)
 @dataclass(frozen=True, order=True)
 class RuleUnit(Rule):
     rule: Rule
+
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return self.rule.alphabet
 
 
 @dataclass(frozen=True, order=True)
@@ -222,6 +212,10 @@ class RuleList(Rule):
 
     def __len__(self) -> int:
         return len(self.rules)
+
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return frozenset({item for rule in self.rules for item in rule.alphabet})
 
 
 ########################################################################################################################
@@ -276,6 +270,10 @@ class Match(Rule):
 
     def __str__(self):
         return f"{self.group!s}({self.action!s})"
+
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return self.group.items
 
 
 __all__ += ["Item", "Group"]
@@ -344,7 +342,7 @@ __all__ += ["Branch", "BranchSet"]
 ########################################################################################################################
 
 @dataclass(frozen=True, order=True)
-class Branch(GenericItem, HasAlphabet, HasState, Can_Be_Splited):
+class Branch(GenericItem, HasState, Can_Be_Splited):
     name: str
     rule: Rule
     priority: int = 0
@@ -360,8 +358,12 @@ class Branch(GenericItem, HasAlphabet, HasState, Can_Be_Splited):
     def __str__(self):
         return f"{self.name!s}[{self.priority}] : {self.rule!s}"
 
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return self.rule.alphabet
 
-class BranchSet(GenericItemSet[Branch], HasAlphabet, HasState):
+
+class BranchSet(GenericItemSet[Branch], HasState):
     def __bool__(self):
         return bool(self.items)
 
@@ -414,6 +416,10 @@ class BranchSet(GenericItemSet[Branch], HasAlphabet, HasState):
             return non_terminal_part or valid_part or error_part
         else:
             return self
+
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return frozenset({item for branch in self.items for item in branch.alphabet})
 
 
 __all__ += ["Element", "OPTIONS"]
