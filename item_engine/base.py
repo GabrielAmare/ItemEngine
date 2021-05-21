@@ -9,9 +9,10 @@ from .generic_items import GenericItem, GenericItemSet
 import python_generator as pg
 
 INF = -1
+EOF = "EOF"
 
 __all__ = [
-    "INF",
+    "INF", "EOF",
     "Rule",
     "Empty", "RuleUnit", "RuleList",
     "Optional", "Repeat", "All", "Any",
@@ -464,7 +465,7 @@ class Element(HasState, HasSpan):
 
     @classmethod
     def EOF(cls, at: INDEX):
-        return cls(at=at, to=at, value=T_STATE("EOF"))
+        return cls(at=at, to=at, value=T_STATE(EOF))
 
     def develop(self, case: CASE, item: Element) -> Element:
         raise NotImplementedError
@@ -474,7 +475,7 @@ class Element(HasState, HasSpan):
 
     @property
     def is_eof(self):
-        return self.value == "EOF"
+        return self.value == EOF
 
 
 class OPTIONS:

@@ -1,7 +1,7 @@
 from typing import Type
 from python_generator import VAR, DEF, BLOCK, IMPORT, ARG, FOR, CONTINUE, STR, BREAK, IF, LIST, DICT, ITER_OVER, \
     COMPREHENSION
-from .. import Element
+from .. import Element, EOF
 
 
 def META_BUILDER_5(name: str, fun: str, input_cls: Type[Element], output_cls: Type[Element]) -> DEF:
@@ -74,7 +74,7 @@ def META_BUILDER_5(name: str, fun: str, input_cls: Type[Element], output_cls: Ty
         CONTINUE
     ))
 
-    EOF_CLAUSE = IF(OLD.GETATTR("value").EQ(STR("EOF")), BLOCK(
+    EOF_CLAUSE = IF(OLD.GETATTR("value").EQ(STR(EOF)), BLOCK(
         CLS.METH("EOF", OLD.GETATTR("to")).YIELD(),
         BREAK
     ))
