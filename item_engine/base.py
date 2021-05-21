@@ -1,10 +1,10 @@
 from __future__ import annotations
 from dataclasses import dataclass, replace
-from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Generic, Type
+from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Generic, Type, Union
 from functools import reduce
 from operator import and_
 
-from .constants import ACTION, INCLUDE, EXCLUDE, AS, IN, T_STATE, INDEX, STATE, CASE
+from .constants import ACTION, INCLUDE, EXCLUDE, AS, IN, T_STATE, INDEX, STATE, CASE, NT_STATE
 from .generic_items import GenericItem, GenericItemSet
 import python_generator as pg
 
@@ -23,33 +23,21 @@ __all__ = [
 # Rule
 ########################################################################################################################
 
-@dataclass(frozen=True, order=True)
 class Rule:
-    def repeat(self, mn: int = 0, mx: int = INF) -> Rule:
-        assert mn >= 0
-        assert mx == -1 or (mx >= mn and mx > 0)
+    def __eq__(self, other):
+        raise NotImplementedError
 
-        if mn == 0:
-            base = Empty(valid=True)
-        else:
-            base = All(tuple(mn * self.all))
+    def __hash__(self):
+        raise NotImplementedError
 
-        if mx == INF:
-            return base & Repeat(self)
-        else:
-            return base & All(tuple((mx - mn) * self.all))
+    def __lt__(self, other):
+        raise NotImplementedError
 
-    @property
-    def optional(self) -> Optional:
-        return Optional(self)
+    def __repr__(self):
+        raise NotImplementedError
 
-    @property
-    def all(self) -> List[Rule]:
-        return list(self.rules) if isinstance(self, All) else [self]
-
-    @property
-    def any(self) -> List[Rule]:
-        return list(self.rules) if isinstance(self, Any) else [self]
+    def __str__(self):
+        raise NotImplementedError
 
     def __and__(self, other: Rule) -> Rule:
         if isinstance(self, Empty):
@@ -58,7 +46,7 @@ class Rule:
         if isinstance(other, Empty):
             return self if other.valid else other
 
-        return All(tuple(self.all + other.all))
+        return All(*self.all, *other.all)
 
     def __or__(self, other) -> Rule:
         if isinstance(self, Empty):
@@ -67,7 +55,7 @@ class Rule:
         if isinstance(other, Empty):
             return self
 
-        return Any(tuple(self.any + other.any))
+        return Any(*self.any, *other.any)
 
     @property
     def is_skipable(self: Rule) -> bool:
@@ -105,14 +93,61 @@ class Rule:
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
         raise NotImplementedError
 
+    def repeat(self: Union[Repeat, Optional, All, Any, Match, Empty], mn: int = 0, mx: int = INF) -> Rule:
+        assert mn >= 0
+        assert mx == -1 or (mx >= mn and mx > 0)
+
+        if mn == 0:
+            base = Empty(valid=True)
+        else:
+            base = All(*(mn * self.all))
+
+        if mx == INF:
+            return base & Repeat(self)
+        else:
+            return base & All(*((mx - mn) * self.all))
+
+    @property
+    def optional(self: Union[Repeat, Optional, All, Any, Match, Empty]) -> Union[Repeat, Optional, Empty]:
+        return Optional(self)
+
+    @property
+    def all(self) -> List[Rule]:
+        return list(self.rules) if isinstance(self, All) else [self]
+
+    @property
+    def any(self) -> List[Rule]:
+        return list(self.rules) if isinstance(self, Any) else [self]
+
 
 ########################################################################################################################
 # Empty | RuleUnit | RuleList
 ########################################################################################################################
 
-@dataclass(frozen=True, order=True)
 class Empty(Rule):
-    valid: bool
+    def __init__(self, valid: bool):
+        self.valid: bool = valid
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.valid!r})"
+
+    def __str__(self):
+        return "VALID" if self.valid else "ERROR"
+
+    def __hash__(self):
+        return hash((type(self), self.valid))
+
+    def __eq__(self, other):
+        if type(self) is type(other):
+            return self.valid == other.valid
+        else:
+            raise NotImplemented
+
+    def __lt__(self, other):
+        if type(self) is type(other):
+            return self.valid < other.valid
+        else:
+            raise NotImplemented
 
     @property
     def is_non_terminal(self) -> bool:
@@ -143,8 +178,27 @@ VALID = Empty(True)
 ERROR = Empty(False)
 
 
-@dataclass(frozen=True, order=True)
 class RuleUnit(Rule):
+    def __init__(self, rule: Rule):
+        self.rule: Rule = rule
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.rule!r})"
+
+    def __str__(self):
+        raise NotImplementedError
+
+    def __hash__(self):
+        return hash((type(self), self.rule))
+
+    def __eq__(self, other):
+        return type(self) is type(other) and self.rule == other.rule
+
+    def __lt__(self, other):
+        if type(self) is type(other):
+            return self.rule < other.rule
+        else:
+            raise NotImplemented
 
     @property
     def is_non_terminal(self) -> bool:
@@ -173,8 +227,27 @@ class RuleUnit(Rule):
         return self.rule.alphabet
 
 
-@dataclass(frozen=True, order=True)
 class RuleList(Rule):
+    def __init__(self, *rules: Rule):
+        self.rules: List[Rule] = list(rules)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({', '.join(map(repr, self.rules))})"
+
+    def __str__(self):
+        raise NotImplementedError
+
+    def __hash__(self):
+        return hash((type(self), *self.rules))
+
+    def __eq__(self, other):
+        return type(self) is type(other) and self.rules == other.rules
+
+    def __lt__(self, other):
+        if type(self) is type(other):
+            return self.rules < other.rules
+        else:
+            raise NotImplemented
 
     @property
     def is_non_terminal(self) -> bool:
@@ -213,7 +286,6 @@ class RuleList(Rule):
 # Optional | Repeat | All | Any
 ########################################################################################################################
 
-@dataclass(frozen=True, order=True)
 class Optional(RuleUnit):
     def __str__(self):
         return f"?[ {self.rule!s} ]"
@@ -240,7 +312,6 @@ class Optional(RuleUnit):
             yield first, after
 
 
-@dataclass(frozen=True, order=True)
 class Repeat(RuleUnit):
     def __str__(self):
         return f"*[ {self.rule!s} ]"
@@ -267,8 +338,13 @@ class Repeat(RuleUnit):
             yield first, after & self
 
 
-@dataclass(frozen=True, order=True)
 class All(RuleList):
+    rules: List[Union[Any, Repeat, Optional, Match, Empty]]
+
+    def __init__(self, *rules: Union[Any, Repeat, Optional, Match, Empty]):
+        assert not any(isinstance(rule, Empty) for rule in rules[:-1])
+        super().__init__(*rules)
+
     @property
     def decompose(self) -> Iterator[Tuple[Rule, Rule]]:
         for index, rule in enumerate(self.rules):
@@ -306,8 +382,13 @@ class All(RuleList):
         return " & ".join(map(str, self.rules))
 
 
-@dataclass(frozen=True, order=True)
 class Any(RuleList):
+    rules: List[Union[All, Repeat, Optional, Match, Empty]]
+
+    def __init__(self, *rules: Union[All, Repeat, Optional, Match, Empty]):
+        assert not any(isinstance(rule, Empty) for rule in rules[:-1])
+        super().__init__(*rules)
+
     def __str__(self):
         return " | ".join(map(str, self.rules))
 
@@ -339,12 +420,27 @@ class Any(RuleList):
 ########################################################################################################################
 
 
-@dataclass(frozen=True, order=True)
 class Match(Rule):
     """When an item is validated by the ``group``, the action will be done"""
 
-    group: Group
-    action: ACTION = ""
+    def __init__(self, group: Group, action: ACTION = ""):
+        self.group: Group = group
+        self.action: ACTION = action
+
+    def __hash__(self):
+        return hash((type(self), self.group, self.action))
+
+    def __eq__(self, other):
+        return type(self) is type(other) and self.group == other.group and self.action == other.action
+
+    def __lt__(self, other):
+        if type(self) is type(other):
+            return (self.group, self.action) < (other.group, other.action)
+        else:
+            raise NotImplemented
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.group!r}, {self.action!r})"
 
     def __str__(self):
         return f"{self.group!s}({self.action!s})"
