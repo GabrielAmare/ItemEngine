@@ -98,9 +98,9 @@ class TargetSelect:
         if self.non_terminal_part:
             return 2, 1
         elif self.valid_branches:
-            return 1, -self.valid_priority
+            return 1, self.valid_priority
         else:
-            return 0, -self.error_priority
+            return 0, self.error_priority
 
     def add_branch(self, branch: Branch) -> None:
         if not branch.is_terminal:
