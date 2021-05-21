@@ -86,6 +86,10 @@ class Rule:
         raise NotImplementedError
 
     @property
+    def is_non_terminal(self) -> bool:
+        raise NotImplementedError
+
+    @property
     def is_terminal(self) -> bool:
         raise NotImplementedError
 
@@ -109,6 +113,10 @@ class Rule:
 @dataclass(frozen=True, order=True)
 class Empty(Rule):
     valid: bool
+
+    @property
+    def is_non_terminal(self) -> bool:
+        return False
 
     @property
     def is_terminal(self) -> bool:
@@ -137,6 +145,11 @@ ERROR = Empty(False)
 
 @dataclass(frozen=True, order=True)
 class RuleUnit(Rule):
+
+    @property
+    def is_non_terminal(self) -> bool:
+        raise NotImplementedError
+
     @property
     def is_terminal(self) -> bool:
         raise NotImplementedError
@@ -162,6 +175,11 @@ class RuleUnit(Rule):
 
 @dataclass(frozen=True, order=True)
 class RuleList(Rule):
+
+    @property
+    def is_non_terminal(self) -> bool:
+        raise NotImplementedError
+
     @property
     def is_terminal(self) -> bool:
         raise NotImplementedError
@@ -201,6 +219,10 @@ class Optional(RuleUnit):
         return f"?[ {self.rule!s} ]"
 
     @property
+    def is_non_terminal(self) -> bool:
+        return True
+
+    @property
     def is_terminal(self) -> bool:
         return False
 
@@ -222,6 +244,10 @@ class Optional(RuleUnit):
 class Repeat(RuleUnit):
     def __str__(self):
         return f"*[ {self.rule!s} ]"
+
+    @property
+    def is_non_terminal(self) -> bool:
+        return True
 
     @property
     def is_terminal(self) -> bool:
@@ -255,6 +281,10 @@ class All(RuleList):
                 break
 
     @property
+    def is_non_terminal(self) -> bool:
+        return len(self.rules) != 1 or self.rules[0].is_non_terminal
+
+    @property
     def is_terminal(self) -> bool:
         return len(self.rules) == 1 and self.rules[0].is_terminal
 
@@ -280,6 +310,10 @@ class All(RuleList):
 class Any(RuleList):
     def __str__(self):
         return " | ".join(map(str, self.rules))
+
+    @property
+    def is_non_terminal(self) -> bool:
+        return any(rule.is_non_terminal for rule in self.rules)
 
     @property
     def is_terminal(self) -> bool:
@@ -318,6 +352,10 @@ class Match(Rule):
     @property
     def alphabet(self) -> FrozenSet[Item]:
         return self.group.items
+
+    @property
+    def is_non_terminal(self) -> bool:
+        return True
 
     @property
     def is_terminal(self) -> bool:
@@ -424,6 +462,10 @@ class Branch(GenericItem):
         return self.rule.alphabet
 
     @property
+    def is_non_terminal(self) -> bool:
+        return self.rule.is_non_terminal
+
+    @property
     def is_terminal(self) -> bool:
         return self.rule.is_terminal
 
@@ -497,6 +539,10 @@ class BranchSet(GenericItemSet[Branch]):
             return non_terminal_part or valid_part or error_part
         else:
             return self
+
+    @property
+    def is_non_terminal(self) -> bool:
+        return any(branch.is_non_terminal for branch in self.items)
 
     @property
     def is_terminal(self) -> bool:
@@ -575,6 +621,10 @@ class Element(HasSpan):
     @property
     def is_eof(self):
         return self.value == EOF
+
+    @property
+    def is_non_terminal(self) -> bool:
+        return isinstance(self.value, NT_STATE)
 
     @property
     def is_terminal(self) -> bool:
