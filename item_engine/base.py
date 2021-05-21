@@ -168,6 +168,18 @@ ERROR = Empty(False)
 
 @dataclass(frozen=True, order=True)
 class RuleUnit(Rule):
+    @property
+    def is_terminal(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_valid(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_error(self) -> bool:
+        raise NotImplementedError
+
     rule: Rule
 
     @property
@@ -177,6 +189,18 @@ class RuleUnit(Rule):
 
 @dataclass(frozen=True, order=True)
 class RuleList(Rule):
+    @property
+    def is_terminal(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_valid(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_error(self) -> bool:
+        raise NotImplementedError
+
     rules: Tuple[Rule, ...]
 
     def __iter__(self) -> Iterator[Rule]:
@@ -199,11 +223,35 @@ class Optional(RuleUnit):
     def __str__(self):
         return f"?[ {self.rule!s} ]"
 
+    @property
+    def is_terminal(self) -> bool:
+        return False
+
+    @property
+    def is_valid(self) -> bool:
+        return False
+
+    @property
+    def is_error(self) -> bool:
+        return False
+
 
 @dataclass(frozen=True, order=True)
 class Repeat(RuleUnit):
     def __str__(self):
         return f"*[ {self.rule!s} ]"
+
+    @property
+    def is_terminal(self) -> bool:
+        return False
+
+    @property
+    def is_valid(self) -> bool:
+        return False
+
+    @property
+    def is_error(self) -> bool:
+        return False
 
 
 @dataclass(frozen=True, order=True)
@@ -261,6 +309,7 @@ class Any(RuleList):
 @dataclass(frozen=True, order=True)
 class Match(Rule):
     """When an item is validated by the ``group``, the action will be done"""
+
     group: Group
     action: ACTION = ""
 
@@ -271,6 +320,18 @@ class Match(Rule):
     def alphabet(self) -> FrozenSet[Item]:
         return self.group.items
 
+    @property
+    def is_terminal(self) -> bool:
+        return False
+
+    @property
+    def is_valid(self) -> bool:
+        return False
+
+    @property
+    def is_error(self) -> bool:
+        return False
+    
 
 __all__ += ["Item", "Group"]
 
