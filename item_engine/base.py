@@ -94,7 +94,7 @@ class HasState:
             return False
 
 
-class CanBeSplited:
+class Can_Be_Splited:
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
         """
@@ -137,7 +137,7 @@ class CanBeSplited:
 ########################################################################################################################
 
 @dataclass(frozen=True, order=True)
-class Rule(HasAlphabet, HasState, CanBeSplited):
+class Rule(HasAlphabet, HasState, Can_Be_Splited):
     def repeat(self, mn: int = 0, mx: int = INF) -> Rule:
         assert mn >= 0
         assert mx == -1 or (mx >= mn and mx > 0)
@@ -344,7 +344,7 @@ __all__ += ["Branch", "BranchSet"]
 ########################################################################################################################
 
 @dataclass(frozen=True, order=True)
-class Branch(GenericItem, HasAlphabet, HasState, CanBeSplited):
+class Branch(GenericItem, HasAlphabet, HasState, Can_Be_Splited):
     name: str
     rule: Rule
     priority: int = 0
