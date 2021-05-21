@@ -129,7 +129,10 @@ class TargetSelect:
         if len(valid_branches) == 1:
             return T_STATE(valid_branches[0].name)
         else:
-            raise AmbiguityException
+            if valid_branches:
+                raise AmbiguityException("\ntoo many :\n" + "\n".join(f"-> {b!r}" for b in valid_branches))
+            else:
+                raise AmbiguityException("\nall null :\n" + "\n".join(f"-> {b!r}" for b in self.valid_branches))
 
     def _data_error(self, error_mode: ERROR_MODE) -> T_STATE:
         if error_mode == ERROR_MODE.FULL:
