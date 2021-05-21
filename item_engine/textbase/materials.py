@@ -150,7 +150,8 @@ def gen_operators(**data: Dict[str, Union[UNIT, OP, ENUM]]) -> Tuple[List[Branch
 def MakeLexer(
         keywords: List[str] = None,
         symbols: List[str] = None,
-        branches: Dict[str, Rule] = None
+        branches: Dict[str, Rule] = None,
+        raw_branches: List[Branch] = None
 ):
     if keywords is None:
         keywords = []
@@ -158,6 +159,8 @@ def MakeLexer(
         symbols = []
     if branches is None:
         branches = {}
+    if raw_branches is None:
+        raw_branches = []
 
     keyword_branches, keyword_register = gen_keywords(*keywords)
     symbols_branches, symbols_register = gen_symbols(*symbols)
@@ -165,7 +168,8 @@ def MakeLexer(
     lexer = make_branch_set(
         *keyword_branches,
         *symbols_branches,
-        *gen_branches(**branches)
+        *gen_branches(**branches),
+        *raw_branches
     )
 
     return lexer, keyword_register, symbols_register
