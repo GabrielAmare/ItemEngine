@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, replace
-from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Generic, Type, Union
+from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Generic, Type
 from functools import reduce
 from operator import and_
 
@@ -18,58 +18,6 @@ __all__ = [
     "Optional", "Repeat", "All", "Any",
     "Match",
 ]
-
-
-class HasState:
-    @property
-    def is_valid(self: Union[Empty, All, Any, Branch, Element]) -> bool:
-        """Return True when a Rule is valid"""
-        if isinstance(self, Empty):
-            return self.valid
-        elif isinstance(self, All):
-            return len(self.rules) == 1 and self.rules[0].is_valid
-        elif isinstance(self, Any):
-            return all(rule.is_valid for rule in self.rules)
-        elif isinstance(self, Branch):
-            return self.rule.is_valid
-        elif isinstance(self, Element):
-            return self.is_terminal and not self.value.startswith('!')
-        else:
-            return False
-
-    @property
-    def is_error(self) -> bool:
-        """Return True when a Rule is error"""
-        if isinstance(self, Empty):
-            return not self.valid
-        elif isinstance(self, All):
-            return len(self.rules) == 1 and self.rules[0].is_error
-        elif isinstance(self, Any):
-            return all(rule.is_error for rule in self.rules)
-        elif isinstance(self, Branch):
-            return self.rule.is_error
-        elif isinstance(self, Element):
-            return self.is_terminal and self.value.startswith('!')
-        else:
-            return False
-
-    @property
-    def is_terminal(self) -> bool:
-        """Return True when a Rule is terminal"""
-        if isinstance(self, Empty):
-            return True
-        elif isinstance(self, All):
-            return len(self.rules) == 1 and self.rules[0].is_terminal
-        elif isinstance(self, Any):
-            return all(rule.is_terminal for rule in self.rules)
-        elif isinstance(self, Branch):
-            return self.rule.is_terminal
-        elif isinstance(self, BranchSet):
-            return all(branch.is_terminal for branch in self.items)
-        elif isinstance(self, Element):
-            return isinstance(self.value, T_STATE)
-        else:
-            return False
 
 
 class Can_Be_Splited:
@@ -115,11 +63,7 @@ class Can_Be_Splited:
 ########################################################################################################################
 
 @dataclass(frozen=True, order=True)
-class Rule(HasState, Can_Be_Splited):
-    @property
-    def alphabet(self) -> FrozenSet[Item]:
-        raise NotImplementedError
-
+class Rule(Can_Be_Splited):
     def repeat(self, mn: int = 0, mx: int = INF) -> Rule:
         assert mn >= 0
         assert mx == -1 or (mx >= mn and mx > 0)
@@ -176,6 +120,22 @@ class Rule(HasState, Can_Be_Splited):
         else:
             return False
 
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        raise NotImplementedError
+
+    @property
+    def is_terminal(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_valid(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_error(self) -> bool:
+        raise NotImplementedError
+
 
 ########################################################################################################################
 # Empty | RuleUnit | RuleList
@@ -184,6 +144,18 @@ class Rule(HasState, Can_Be_Splited):
 @dataclass(frozen=True, order=True)
 class Empty(Rule):
     valid: bool
+
+    @property
+    def is_terminal(self) -> bool:
+        return True
+
+    @property
+    def is_valid(self) -> bool:
+        return self.valid
+
+    @property
+    def is_error(self) -> bool:
+        return not self.valid
 
     @property
     def alphabet(self) -> FrozenSet[Item]:
@@ -247,6 +219,18 @@ class All(RuleList):
             if not rule.is_skipable:
                 break
 
+    @property
+    def is_terminal(self) -> bool:
+        return len(self.rules) == 1 and self.rules[0].is_terminal
+
+    @property
+    def is_valid(self) -> bool:
+        return len(self.rules) == 1 and self.rules[0].is_valid
+
+    @property
+    def is_error(self) -> bool:
+        return len(self.rules) == 1 and self.rules[0].is_error
+
     def __str__(self):
         return " & ".join(map(str, self.rules))
 
@@ -255,6 +239,18 @@ class All(RuleList):
 class Any(RuleList):
     def __str__(self):
         return " | ".join(map(str, self.rules))
+
+    @property
+    def is_terminal(self) -> bool:
+        return all(rule.is_terminal for rule in self.rules)
+
+    @property
+    def is_valid(self) -> bool:
+        return all(rule.is_valid for rule in self.rules)
+
+    @property
+    def is_error(self) -> bool:
+        return all(rule.is_error for rule in self.rules)
 
 
 ########################################################################################################################
@@ -342,7 +338,7 @@ __all__ += ["Branch", "BranchSet"]
 ########################################################################################################################
 
 @dataclass(frozen=True, order=True)
-class Branch(GenericItem, HasState, Can_Be_Splited):
+class Branch(GenericItem, Can_Be_Splited):
     name: str
     rule: Rule
     priority: int = 0
@@ -362,8 +358,20 @@ class Branch(GenericItem, HasState, Can_Be_Splited):
     def alphabet(self) -> FrozenSet[Item]:
         return self.rule.alphabet
 
+    @property
+    def is_terminal(self) -> bool:
+        return self.rule.is_terminal
 
-class BranchSet(GenericItemSet[Branch], HasState):
+    @property
+    def is_valid(self) -> bool:
+        return self.rule.is_valid
+
+    @property
+    def is_error(self) -> bool:
+        return self.rule.is_error
+
+
+class BranchSet(GenericItemSet[Branch]):
     def __bool__(self):
         return bool(self.items)
 
@@ -418,6 +426,18 @@ class BranchSet(GenericItemSet[Branch], HasState):
             return self
 
     @property
+    def is_terminal(self) -> bool:
+        return all(branch.is_terminal for branch in self.items)
+
+    @property
+    def is_valid(self) -> bool:
+        return all(branch.is_valid for branch in self.items)
+
+    @property
+    def is_error(self) -> bool:
+        return all(branch.is_error for branch in self.items)
+
+    @property
     def alphabet(self) -> FrozenSet[Item]:
         return frozenset({item for branch in self.items for item in branch.alphabet})
 
@@ -466,7 +486,7 @@ class HasSpan:
 
 
 @dataclass(frozen=True, order=True)
-class Element(HasState, HasSpan):
+class Element(HasSpan):
     value: STATE
 
     @classmethod
@@ -482,6 +502,18 @@ class Element(HasState, HasSpan):
     @property
     def is_eof(self):
         return self.value == EOF
+
+    @property
+    def is_terminal(self) -> bool:
+        return isinstance(self.value, T_STATE)
+
+    @property
+    def is_valid(self) -> bool:
+        return self.is_terminal and not self.value.startswith('!')
+
+    @property
+    def is_error(self) -> bool:
+        return self.is_terminal and self.value.startswith('!')
 
 
 class OPTIONS:
