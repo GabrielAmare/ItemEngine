@@ -136,9 +136,9 @@ class OP:
 
 
 class ENUM:
-    def __init__(self, g: Group, s: Union[Symbol, Keyword]):
+    def __init__(self, g: Group, s: Union[Symbol, Keyword] = None):
         self.g: Group = g
-        self.s: Union[Symbol, Keyword] = s
+        self.s: Optional[Union[Symbol, Keyword]] = s
 
     def pg_class(self, cls_name: str) -> pg.CLASS:
         OTHER = pg.VAR("other")
@@ -161,7 +161,7 @@ class ENUM:
                 pg.DEF(
                     name="__str__",
                     args=pg.SELF,
-                    block=pg.STR(str(self.s)).GETATTR("join").CALL(
+                    block=pg.STR("" if self.s is None else str(self.s)).GETATTR("join").CALL(
                         pg.VAR("map").CALL("str", pg.SELF.GETATTR("cs"))
                     ).RETURN()
                 ),
@@ -197,9 +197,14 @@ class ENUM:
 
     def branch(self, cls_name: str):
         br_name = f"__{cls_name.upper()}__"
+        if self.s is None:
+            rule = self.g.in_("cs").repeat(2, INF)
+        else:
+            rule = self.g.in_("cs") & (self.s.tokenG.inc() & self.g.in_("cs")).repeat(1, INF)
+
         return Branch(
             name=br_name,
-            rule=self.g.in_("cs") & (self.s.tokenG.inc() & self.g.in_("cs")).repeat(1, INF),
+            rule=rule,
             priority=0,
             transfer=False
         )
