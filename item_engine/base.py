@@ -339,9 +339,11 @@ class Repeat(RuleUnit):
 
 
 class All(RuleList):
-    rules: List[Union[Any, Repeat, Optional, Match, Empty]]
+    rules: List[Rule]
 
-    def __init__(self, *rules: Union[Any, Repeat, Optional, Match, Empty]):
+    def __init__(self, *rules: Rule):
+        assert len(rules) > 1
+        assert not any(isinstance(rule, All) for rule in rules)
         assert not any(isinstance(rule, Empty) for rule in rules[:-1])
         super().__init__(*rules)
 
@@ -383,9 +385,11 @@ class All(RuleList):
 
 
 class Any(RuleList):
-    rules: List[Union[All, Repeat, Optional, Match, Empty]]
+    rules: List[Rule]
 
-    def __init__(self, *rules: Union[All, Repeat, Optional, Match, Empty]):
+    def __init__(self, *rules: Rule):
+        assert len(rules) > 1
+        assert not any(isinstance(rule, Any) for rule in rules)
         assert not any(isinstance(rule, Empty) for rule in rules[:-1])
         super().__init__(*rules)
 
@@ -764,14 +768,19 @@ class OPTIONS:
         return all(not a.ol(b) for a in elements for b in elements if a is not b)
 
 
-def ANY(*args: Union[All, Any, Repeat, Optional, Match, Empty]):
-    rules: List[Union[All, Repeat, Optional, Match, Empty]] = []
+def ANY(*args: Rule):
+    rules: List[Rule] = []
+
+    def new_rule(rule):
+        if rule not in rules:
+            rules.append(rule)
 
     for arg in args:
-        if isinstance(arg, All):
-            rules.extend(arg.rules)
+        if isinstance(arg, Any):
+            for rule in arg.rules:
+                new_rule(rule)
         else:
-            rules.append(arg)
+            new_rule(arg)
 
     if len(rules) == 1:
         return rules[0]
@@ -779,8 +788,8 @@ def ANY(*args: Union[All, Any, Repeat, Optional, Match, Empty]):
     return Any(*rules)
 
 
-def ALL(*args: Union[All, Any, Repeat, Optional, Match, Empty]):
-    rules: List[Union[Any, Repeat, Optional, Match, Empty]] = []
+def ALL(*args: Rule):
+    rules: List[Rule] = []
 
     for arg in args:
         if isinstance(arg, All):
@@ -799,10 +808,8 @@ def OPTIONAL(rule: Rule) -> Union[Repeat, Optional, Empty]:
         return rule
     elif isinstance(rule, Empty):
         return VALID
-    elif isinstance(rule, (All, Any, Match)):
-        return Optional(rule)
     else:
-        raise TypeError(type(rule))
+        return Optional(rule)
 
 
 def REPEAT(rule: Rule) -> Union[Repeat, Optional, Empty]:
@@ -812,10 +819,8 @@ def REPEAT(rule: Rule) -> Union[Repeat, Optional, Empty]:
         return Repeat(rule.rule)
     elif isinstance(rule, Empty):
         return VALID
-    elif isinstance(rule, (All, Any, Match)):
-        return Repeat(rule)
     else:
-        raise TypeError(type(rule))
+        return Repeat(rule)
 
 
 __all__ += ["ALL", "ANY", "REPEAT", "OPTIONAL"]
