@@ -192,6 +192,9 @@ def optimized(data: Dict[ISK, ISV]) -> Dict[ISK, ISV]:
     """
     explicit: List = sorted(set(item for isk in data for item in isk.items))
 
+    if not explicit:
+        return data
+
     item_partition: Dict[GenericItem, ISV] = {
         item: reduce(or_, [isv for isk, isv in data.items() if item in isk])
         for item in explicit
