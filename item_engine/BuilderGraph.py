@@ -104,7 +104,7 @@ class BuilderGraph(DAG):
             for origin, target in zip(elements, elements[1:])
         ]
 
-    def display(self, splines="ortho", ranksep=0.5, view: bool = True):
+    def display(self, splines="ortho", ranksep=0.5, view: bool = True, fp: str = ""):
         import graphviz as gv
 
         import os
@@ -135,9 +135,9 @@ class BuilderGraph(DAG):
                 head_name=str(id(link.target)),
                 **link.get("style", {})
             )
-        directory, filename = os.path.split(self.get("name", "digraph"))
+        directory, filename = os.path.split(fp or self.get("name", "digraph"))
         if view:
             dot.view(filename=filename)
         else:
-            directory, filename = os.path.split(self.get("name", "digraph"))
+            directory, filename = os.path.split(fp or self.get("name", "digraph"))
             dot.render(cleanup=True, filename=filename, directory=directory, quiet=True)
