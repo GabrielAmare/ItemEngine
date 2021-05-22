@@ -635,9 +635,6 @@ class Branch:
     rule: Rule
     priority: int = 0
 
-    @property
-    def as_group(self) -> BranchSet:
-        return BranchSet(frozenset({self}))
 
     def new_rule(self, rule: Rule) -> Branch:
         return replace(self, rule=rule)
