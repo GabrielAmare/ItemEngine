@@ -71,22 +71,27 @@ class GroupToOutcome(Dict[Group, Outcome]):
 
         return self
 
+    def item_outcome(self, item: Optional[Item]) -> Outcome:
+        if item is None:  # here None act as an unspecified item
+            return Outcome.make(outcome for group, outcome in self.items() if group.inverted)
+        else:
+            return Outcome.make(outcome for group, outcome in self.items() if item in group)
+
+    def alphabet(self, group_cls: Type[Group]) -> Group:
+        return group_cls(item for group in self for item in group.items)
+
     def optimized(self, group_cls: Type[Group]) -> GroupToOutcome:
-        groups: List[Group] = [group for group in self.keys()]
+        alphabet: group_cls = self.alphabet(group_cls)
 
-        explicit_items: List[Item] = sorted(set(item for isk in self for item in isk.items))
+        default: Outcome = self.item_outcome(None)
+        reverted = {default: ~alphabet}
 
-        explicit: group_cls = group_cls(explicit_items)
-
-        default = Outcome.make(isv for isk, isv in self.items() if isk.inverted)
-        reverted = {default: ~explicit}
-
-        for item in explicit.items:
-            isv = Outcome.make(isv for isk, isv in self.items() if item in isk)
-            if isv in reverted:
-                reverted[isv] += item
+        for item in alphabet.items:
+            outcome: Outcome = self.item_outcome(item)
+            if outcome in reverted:
+                reverted[outcome] += item
             else:
-                reverted[isv] = group_cls({item})
+                reverted[outcome] = group_cls({item})
 
         result = GroupToOutcome({isk: isv for isv, isk in reverted.items()})
 
