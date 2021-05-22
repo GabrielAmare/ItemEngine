@@ -11,7 +11,6 @@ from python_generator import VAR, DEF, ARGS, INT, IF, BLOCK, STR, LIST, IMPORT, 
 
 from .BuilderGraph import BuilderGraph
 from .base import Group, BranchSet, Branch, Element, ArgsHashed, Item
-# from .generic_items import GenericItem, GenericItemSet
 from .constants import ACTION, STATE, NT_STATE, T_STATE
 
 DEBUG_GROUP_TO_OUTCOME = False
