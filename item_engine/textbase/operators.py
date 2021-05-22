@@ -130,8 +130,7 @@ class OP:
         return Branch(
             name=br_name,
             rule=All(*self.matches),
-            priority=0,
-            transfer=False
+            priority=0
         )
 
 
@@ -205,6 +204,5 @@ class ENUM:
         return Branch(
             name=br_name,
             rule=rule,
-            priority=0,
-            transfer=False
+            priority=0
         )

@@ -634,7 +634,6 @@ class Branch:
     name: str
     rule: Rule
     priority: int = 0
-    transfer: bool = False
 
     @property
     def as_group(self) -> BranchSet:
