@@ -262,20 +262,31 @@ class All(RuleList):
         return cls.make(*args)
 
     @classmethod
+    def _flat(cls, *args: Rule) -> Iterable[Rule]:
+        for arg in args:
+            if isinstance(arg, cls):
+                yield from cls._flat(*arg.rules)
+            else:
+                yield arg
+
+    @classmethod
     def make(cls, *args: Rule) -> Rule:
         rules: List[Rule] = []
 
-        for arg in args:
-            if isinstance(arg, cls):
-                rules.extend(arg.rules)
-            else:
-                rules.append(arg)
+        for arg in cls._flat(*args):
+            if arg == ERROR:
+                return ERROR
+
+            if arg == VALID:
+                continue
+
+            rules.append(arg)
+
+        if len(rules) == 0:
+            return VALID
 
         if len(rules) == 1:
             return rules[0]
-
-        if any(rule == ERROR for rule in rules):
-            return ERROR
 
         return cls(*rules)
 
