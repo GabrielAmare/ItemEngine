@@ -271,7 +271,11 @@ class Repeat(Skipable):
 
 class All(RuleList):
     @classmethod
-    def make(cls, *args: Rule):
+    def join(cls, args: Iterable[Rule]) -> Rule:
+        return cls.make(*args)
+
+    @classmethod
+    def make(cls, *args: Rule) -> Rule:
         rules: List[Rule] = []
 
         for arg in args:
@@ -330,6 +334,10 @@ class All(RuleList):
 
 
 class Any(RuleList):
+    @classmethod
+    def join(cls, args: Iterable[Rule]):
+        return cls.make(*args)
+
     @classmethod
     def make(cls, *args: Rule):
         rules: List[Rule] = []
