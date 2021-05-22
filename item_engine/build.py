@@ -246,7 +246,7 @@ class GroupSelect(Dict[Group, ActionSelect]):
 
     def data(self, func: FUNC, formal: bool = False) -> GroupSelectData:
         def sort(group, action_select) -> tuple:
-            return group.inverted, len(group.items), len(action_select.keys())
+            return (group.inverted, len(group.items), *sorted(group.items))
 
         *cases, default = sorted(self.items(), key=lambda item: sort(*item))
 

@@ -9,16 +9,16 @@ __all__ = ['lexer']
 
 def _lexer(current: Token, item: Char) -> Tuple[ACTION, STATE]:
     if current.value == 0:
-        if item.value == '-':
-            return '∈', 'DASH'
-        elif item.value == '/':
-            return '∈', 'SLASH'
+        if item.value == '*':
+            return '∈', 'STAR'
         elif item.value == '+':
             return '∈', 'PLUS'
-        elif item.value == '*':
-            return '∈', 'STAR'
+        elif item.value == '-':
+            return '∈', 'DASH'
         elif item.value == '.':
             return '∈', 3
+        elif item.value == '/':
+            return '∈', 'SLASH'
         elif item.value in '0123456789':
             return '∈', 2
         elif item.value in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz':
