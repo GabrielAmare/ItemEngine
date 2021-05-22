@@ -13,7 +13,7 @@ def charset(s: str) -> CharG:
 
 def string(s: str) -> Rule:
     """Make a Rule that matches the specified string ``s``"""
-    return All.make(*(include(charset(c)) for c in s))
+    return All.join(map(include, map(charset, s)))
 
 
 def make_characters(text: str, eof: bool = False) -> Iterator[Char]:
