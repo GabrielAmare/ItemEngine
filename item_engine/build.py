@@ -374,7 +374,7 @@ class ActionSelectData:
     def __init__(self, cases: Dict[ACTION, STATE]):
         self.cases: Dict[ACTION, STATE] = cases
 
-    def code(self, item: VAR, formal: bool) -> BLOCK:
+    def code(self, _item: VAR, formal: bool) -> BLOCK:
         rtype = RETURN if formal else YIELD
 
         return BLOCK(*[
@@ -492,14 +492,14 @@ class ParserData:
 
         memory = {}
 
-        def make_chain(origin: NT_STATE, group: Group, action: ACTION, target: STATE):
-            origin_node = getnode(origin)
-            target_node = getnode(target)
-            k1 = (group, action, target_node)
+        def make_chain(o: NT_STATE, g: Group, a: ACTION, t: STATE):
+            origin_node = getnode(o)
+            target_node = getnode(t)
+            k1 = (g, a, target_node)
             if k1 in memory:
                 group_action_node = memory[k1]
             else:
-                memory[k1] = group_action_node = dag.group_action(group, action)
+                memory[k1] = group_action_node = dag.group_action(g, a)
                 dag.link(group_action_node, target_node)
 
             k3 = (origin_node, group_action_node)
