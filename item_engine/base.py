@@ -9,27 +9,13 @@ from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Type, Union, Hasha
 import python_generator as pg
 
 from .constants import ACTION, INCLUDE, EXCLUDE, AS, IN, T_STATE, INDEX, STATE, CASE, NT_STATE, INF, EOF
+from .utils import ArgsHashed
 
 __all__ = [
     "Rule", "RuleUnit", "RuleList", "Empty",  # abstracts
     "Optional", "Repeat", "All", "Any",  # composed
     "Match", "VALID", "ERROR"  # simple
 ]
-
-
-class ArgsHashed(Hashable):
-    @property
-    def __args__(self) -> Tuple[Hashable, ...]:
-        raise NotImplementedError
-
-    def __eq__(self, other: ArgsHashed):
-        return self.__args__ == other.__args__
-
-    def __hash__(self):
-        return hash(self.__args__)
-
-    def __lt__(self, other: ArgsHashed):
-        return self.__args__ < other.__args__
 
 
 ########################################################################################################################
