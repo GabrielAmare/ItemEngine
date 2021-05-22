@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, replace
-from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Generic, Type, Union
+from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Generic, Type, Union, Hashable
 from functools import reduce
 from operator import and_
 
@@ -15,18 +15,28 @@ __all__ = [
 ]
 
 
+class ArgsHashed(Hashable):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        raise NotImplementedError
+
+    def __eq__(self, other: ArgsHashed):
+        return self.__args__ == other.__args__
+
+    def __hash__(self):
+        return hash(self.__args__)
+
+    def __lt__(self, other: ArgsHashed):
+        return self.__args__ < other.__args__
+
+
 ########################################################################################################################
 # Rule
 ########################################################################################################################
 
-class Rule:
-    def __eq__(self, other):
-        raise NotImplementedError
-
-    def __hash__(self):
-        raise NotImplementedError
-
-    def __lt__(self, other):
+class Rule(ArgsHashed):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
         raise NotImplementedError
 
     def __repr__(self):
@@ -54,16 +64,8 @@ class Rule:
         return Any(*self.any, *other.any)
 
     @property
-    def is_skipable(self: Rule) -> bool:
-        """Return True when a Rule is skipable"""
-        if isinstance(self, (Optional, Repeat)):
-            return True
-        elif isinstance(self, All):
-            return all(rule.is_skipable for rule in self.rules)
-        elif isinstance(self, Any):
-            return any(rule.is_skipable for rule in self.rules)
-        else:
-            return False
+    def is_skipable(self) -> bool:
+        raise NotImplementedError
 
     @property
     def alphabet(self) -> FrozenSet[Item]:
@@ -121,6 +123,10 @@ class Rule:
 ########################################################################################################################
 
 class Empty(Rule):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.valid
+
     def __init__(self, valid: bool):
         self.valid: bool = valid
 
@@ -130,28 +136,10 @@ class Empty(Rule):
     def __str__(self):
         return "VALID" if self.valid else "ERROR"
 
-    def __hash__(self):
-        return hash((type(self), self.valid))
-
-    def __eq__(self, other):
-        if type(self) is type(other):
-            return self.valid == other.valid
-        else:
-            raise NotImplemented
-
-    def __lt__(self, other):
-        if type(self) is type(other):
-            return self.valid < other.valid
-        else:
-            raise NotImplemented
-
-    @property
-    def is_non_terminal(self) -> bool:
-        return False
-
-    @property
-    def is_terminal(self) -> bool:
-        return True
+    alphabet: FrozenSet[Item] = frozenset()
+    is_skipable: bool = False
+    is_non_terminal: bool = False
+    is_terminal: bool = True
 
     @property
     def is_valid(self) -> bool:
@@ -160,10 +148,6 @@ class Empty(Rule):
     @property
     def is_error(self) -> bool:
         return not self.valid
-
-    @property
-    def alphabet(self) -> FrozenSet[Item]:
-        return frozenset()
 
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
@@ -175,6 +159,10 @@ ERROR = Empty(False)
 
 
 class RuleUnit(Rule):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.rule
+
     def __init__(self, rule: Rule):
         self.rule: Rule = rule
 
@@ -184,17 +172,9 @@ class RuleUnit(Rule):
     def __str__(self):
         raise NotImplementedError
 
-    def __hash__(self):
-        return hash((type(self), self.rule))
-
-    def __eq__(self, other):
-        return type(self) is type(other) and self.rule == other.rule
-
-    def __lt__(self, other):
-        if type(self) is type(other):
-            return self.rule < other.rule
-        else:
-            raise NotImplemented
+    @property
+    def is_skipable(self) -> bool:
+        raise NotImplementedError
 
     @property
     def is_non_terminal(self) -> bool:
@@ -216,14 +196,16 @@ class RuleUnit(Rule):
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
         raise NotImplementedError
 
-    rule: Rule
-
     @property
     def alphabet(self) -> FrozenSet[Item]:
         return self.rule.alphabet
 
 
 class RuleList(Rule):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return (type(self), *self.rules)
+
     def __init__(self, *rules: Rule):
         self.rules: List[Rule] = list(rules)
 
@@ -233,17 +215,9 @@ class RuleList(Rule):
     def __str__(self):
         raise NotImplementedError
 
-    def __hash__(self):
-        return hash((type(self), *self.rules))
-
-    def __eq__(self, other):
-        return type(self) is type(other) and self.rules == other.rules
-
-    def __lt__(self, other):
-        if type(self) is type(other):
-            return self.rules < other.rules
-        else:
-            raise NotImplemented
+    @property
+    def is_skipable(self) -> bool:
+        raise NotImplementedError
 
     @property
     def is_non_terminal(self) -> bool:
@@ -264,8 +238,6 @@ class RuleList(Rule):
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
         raise NotImplementedError
-
-    rules: Tuple[Rule, ...]
 
     def __iter__(self) -> Iterator[Rule]:
         return iter(self.rules)
@@ -282,25 +254,41 @@ class RuleList(Rule):
 # Optional | Repeat | All | Any
 ########################################################################################################################
 
-class Optional(RuleUnit):
+class Skipable(RuleUnit):
+    is_skipable: bool = True
+    is_non_terminal: bool = True
+    is_terminal: bool = False
+    is_valid: bool = False
+    is_error: bool = False
+
+    @classmethod
+    def make(cls, rule: Rule) -> Union[Skipable, Empty]:
+        if isinstance(rule, Repeat):
+            return rule
+
+        if isinstance(rule, Empty):
+            return VALID
+
+        if isinstance(rule, Optional):
+            rule = rule.rule
+
+        return cls(rule)
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        raise NotImplementedError
+
+    def __str__(self):
+        raise NotImplementedError
+
+
+class Optional(Skipable):
+    def __init__(self, rule: Rule):
+        assert not isinstance(rule, (Skipable, Empty))
+        super().__init__(rule)
+
     def __str__(self):
         return f"?[ {self.rule!s} ]"
-
-    @property
-    def is_non_terminal(self) -> bool:
-        return True
-
-    @property
-    def is_terminal(self) -> bool:
-        return False
-
-    @property
-    def is_valid(self) -> bool:
-        return False
-
-    @property
-    def is_error(self) -> bool:
-        return False
 
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
@@ -308,25 +296,13 @@ class Optional(RuleUnit):
             yield first, after
 
 
-class Repeat(RuleUnit):
+class Repeat(Skipable):
+    def __init__(self, rule: Rule):
+        assert not isinstance(rule, (Skipable, Empty))
+        super().__init__(rule)
+
     def __str__(self):
         return f"*[ {self.rule!s} ]"
-
-    @property
-    def is_non_terminal(self) -> bool:
-        return True
-
-    @property
-    def is_terminal(self) -> bool:
-        return False
-
-    @property
-    def is_valid(self) -> bool:
-        return False
-
-    @property
-    def is_error(self) -> bool:
-        return False
 
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
@@ -335,12 +311,22 @@ class Repeat(RuleUnit):
 
 
 class All(RuleList):
-    rules: List[Rule]
+    @classmethod
+    def make(cls, *args: Rule):
+        rules: List[Rule] = []
+
+        for arg in args:
+            if isinstance(arg, cls):
+                rules.extend(arg.rules)
+            else:
+                rules.append(arg)
+
+        if len(rules) == 1:
+            return rules[0]
+
+        return cls(*rules)
 
     def __init__(self, *rules: Rule):
-        assert len(rules) > 1
-        assert not any(isinstance(rule, All) for rule in rules)
-        assert not any(isinstance(rule, Empty) for rule in rules[:-1])
         super().__init__(*rules)
 
     @property
@@ -353,6 +339,10 @@ class All(RuleList):
 
             if not rule.is_skipable:
                 break
+
+    @property
+    def is_skipable(self) -> bool:
+        return all(rule.is_skipable for rule in self.rules)
 
     @property
     def is_non_terminal(self) -> bool:
@@ -381,7 +371,22 @@ class All(RuleList):
 
 
 class Any(RuleList):
-    rules: List[Rule]
+    @classmethod
+    def make(cls, *args: Rule):
+        rules: List[Rule] = []
+
+        for arg in args:
+            if isinstance(arg, cls):
+                for rule in arg.rules:
+                    if rule not in rules:
+                        rules.append(rule)
+            elif arg not in rules:
+                rules.append(arg)
+
+        if len(rules) == 1:
+            return rules[0]
+
+        return cls(*rules)
 
     def __init__(self, *rules: Rule):
         assert len(rules) > 1
@@ -391,6 +396,10 @@ class Any(RuleList):
 
     def __str__(self):
         return " | ".join(map(str, self.rules))
+
+    @property
+    def is_skipable(self) -> bool:
+        return any(rule.is_skipable for rule in self.rules)
 
     @property
     def is_non_terminal(self) -> bool:
@@ -421,23 +430,19 @@ class Any(RuleList):
 
 
 class Match(Rule):
-    """When an item is validated by the ``group``, the action will be done"""
+    is_skipable: bool = False
+    is_non_terminal: bool = True
+    is_terminal: bool = False
+    is_valid: bool = False
+    is_error: bool = False
+
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.group, self.action
 
     def __init__(self, group: Group, action: ACTION = ""):
         self.group: Group = group
         self.action: ACTION = action
-
-    def __hash__(self):
-        return hash((type(self), self.group, self.action))
-
-    def __eq__(self, other):
-        return type(self) is type(other) and self.group == other.group and self.action == other.action
-
-    def __lt__(self, other):
-        if type(self) is type(other):
-            return (self.group, self.action) < (other.group, other.action)
-        else:
-            raise NotImplemented
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.group!r}, {self.action!r})"
@@ -448,22 +453,6 @@ class Match(Rule):
     @property
     def alphabet(self) -> FrozenSet[Item]:
         return self.group.items
-
-    @property
-    def is_non_terminal(self) -> bool:
-        return True
-
-    @property
-    def is_terminal(self) -> bool:
-        return False
-
-    @property
-    def is_valid(self) -> bool:
-        return False
-
-    @property
-    def is_error(self) -> bool:
-        return False
 
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
@@ -762,61 +751,3 @@ class OPTIONS:
     @staticmethod
     def non_overlaping(elements: List[Element]):
         return all(not a.ol(b) for a in elements for b in elements if a is not b)
-
-
-def ANY(*args: Rule):
-    rules: List[Rule] = []
-
-    def new_rule(rule):
-        if rule not in rules:
-            rules.append(rule)
-
-    for arg in args:
-        if isinstance(arg, Any):
-            for rule in arg.rules:
-                new_rule(rule)
-        else:
-            new_rule(arg)
-
-    if len(rules) == 1:
-        return rules[0]
-
-    return Any(*rules)
-
-
-def ALL(*args: Rule):
-    rules: List[Rule] = []
-
-    for arg in args:
-        if isinstance(arg, All):
-            rules.extend(arg.rules)
-        else:
-            rules.append(arg)
-
-    if len(rules) == 1:
-        return rules[0]
-
-    return All(*rules)
-
-
-def OPTIONAL(rule: Rule) -> Union[Repeat, Optional, Empty]:
-    if isinstance(rule, (Repeat, Optional)):
-        return rule
-    elif isinstance(rule, Empty):
-        return VALID
-    else:
-        return Optional(rule)
-
-
-def REPEAT(rule: Rule) -> Union[Repeat, Optional, Empty]:
-    if isinstance(rule, Repeat):
-        return rule
-    elif isinstance(rule, Optional):
-        return Repeat(rule.rule)
-    elif isinstance(rule, Empty):
-        return VALID
-    else:
-        return Repeat(rule)
-
-
-__all__ += ["ALL", "ANY", "REPEAT", "OPTIONAL"]
