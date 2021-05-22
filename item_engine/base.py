@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Type, Union, Hashable, Iterable
 from functools import reduce
 from operator import and_, xor
@@ -629,14 +629,15 @@ __all__ += ["Branch", "BranchSet"]
 # Branch & BranchSet
 ########################################################################################################################
 
-class Branch(ArgsHashed):
+class Branch(RuleUnit):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), self.name, self.rule, self.priority
 
     def __init__(self, name: str, rule: Rule, priority: int = 0):
+        assert not isinstance(rule, Branch)
+        super().__init__(rule)
         self.name: str = name
-        self.rule: Rule = rule
         self.priority: int = priority
 
     def new_rule(self, rule: Rule) -> Branch:
@@ -648,6 +649,10 @@ class Branch(ArgsHashed):
     @property
     def alphabet(self) -> FrozenSet[Item]:
         return self.rule.alphabet
+
+    @property
+    def is_skipable(self) -> bool:
+        return False
 
     @property
     def is_non_terminal(self) -> bool:
