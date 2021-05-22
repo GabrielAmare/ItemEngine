@@ -1,6 +1,8 @@
 import unittest
 from typing import Tuple, Iterator, FrozenSet
 
+from item_engine.constants import EXCLUDE, INCLUDE
+
 from item_engine.base import *
 
 
@@ -67,6 +69,24 @@ class FakeRule(Rule):
         raise NotImplementedError
 
 
+class FakeItem(Item):
+    def __init__(self, name: str):
+        self.name: str = name
+
+    @property
+    def as_group(self) -> Group:
+        return Group({self})
+
+    def __hash__(self):
+        pass
+
+    def __eq__(self, other):
+        pass
+
+    def __lt__(self, other):
+        pass
+
+
 class TestRules(unittest.TestCase):
     def test_001(self):
         """Testing Optional.make"""
@@ -119,6 +139,13 @@ class TestRules(unittest.TestCase):
         self.assertEqual(first=ERROR, second=Any.make(ERROR))
         self.assertEqual(first=A, second=Any.make(A, A))
         self.assertEqual(first=Any(A, B), second=Any.make(A, B))
+
+    def test_005(self):
+        """Testing Group.never / Group.is_never / Group.always / Group.is_always"""
+        self.assertTrue(Group.always().is_always)
+        self.assertFalse(Group.always().is_never)
+        self.assertTrue(Group.never().is_never)
+        self.assertFalse(Group.never().is_always)
 
 
 if __name__ == '__main__':

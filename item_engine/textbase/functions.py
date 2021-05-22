@@ -1,9 +1,9 @@
 from typing import Iterator
 
-from .. import *
+from item_engine import *
 from .items import *
 
-__all__ = ["charset", "string", "make_characters", "make_branch_set"]
+__all__ = ["charset", "string", "make_characters"]
 
 
 def charset(s: str) -> CharG:
@@ -13,7 +13,7 @@ def charset(s: str) -> CharG:
 
 def string(s: str) -> All:
     """Make a Rule that matches the specified string ``s``"""
-    return All(tuple(charset(c).inc() for c in s))
+    return All(*(include(charset(c)) for c in s))
 
 
 def make_characters(text: str, eof: bool = False) -> Iterator[Char]:
@@ -24,7 +24,3 @@ def make_characters(text: str, eof: bool = False) -> Iterator[Char]:
 
     if eof:
         yield Char.EOF(index + 1)
-
-
-def make_branch_set(*branches: Branch) -> BranchSet:
-    return BranchSet(frozenset(branches))

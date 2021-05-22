@@ -1,11 +1,10 @@
 from __future__ import annotations
 from dataclasses import dataclass, replace
-from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Generic, Type, Union, Hashable
+from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Type, Union, Hashable, Iterable
 from functools import reduce
-from operator import and_
+from operator import and_, xor
 
 from .constants import ACTION, INCLUDE, EXCLUDE, AS, IN, T_STATE, INDEX, STATE, CASE, NT_STATE, INF, EOF
-from .generic_items import GenericItem, GenericItemSet
 import python_generator as pg
 
 __all__ = [
@@ -463,7 +462,11 @@ class Match(Rule):
 __all__ += ["Item", "Group"]
 
 
-class ItemInterface:
+class ItemInterface(ArgsHashed):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        raise NotImplementedError
+
     def match(self, action: ACTION) -> Match:
         if isinstance(self, Item):
             return Match(self.as_group, action)
@@ -490,17 +493,118 @@ class ItemInterface:
     in_ = include_in
 
 
-@dataclass(frozen=True, order=True)
-class Item(GenericItem, ItemInterface):
+class Item(ItemInterface):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        raise NotImplementedError
+
     @property
     def as_group(self) -> Group:
         raise NotImplementedError
 
+    def __or__(self, other: Group) -> Group:
+        return self.as_group | other
+
+    __ior__ = __or__
+
+    def __add__(self, other: Item) -> Group:
+        return self.as_group + other
+
+    __iadd__ = __add__
+
 
 E = TypeVar("E", bound=Item)
+T = TypeVar("T")
 
 
-class Group(GenericItemSet[E], Generic[E], ItemInterface):
+class Group(ItemInterface, ArgsHashed):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.items, self.inverted
+
+    @classmethod
+    def never(cls: Type[T]) -> T:
+        """return ∅"""
+        return cls(frozenset(), False)
+
+    @classmethod
+    def always(cls: Type[T]) -> T:
+        """return Ω"""
+        return cls(frozenset(), True)
+
+    @property
+    def is_never(self) -> bool:
+        """return self == ∅"""
+        return not self.inverted and not self.items
+
+    @property
+    def is_always(self) -> bool:
+        """return self == Ω"""
+        return self.inverted and not self.items
+
+    def __init__(self, items: Iterable[Item] = None, inverted: bool = False):
+        self.items: FrozenSet[Item] = frozenset() if items is None else frozenset(items)
+        self.inverted: bool = inverted
+
+    def __repr__(self) -> str:
+        """return repr(self)"""
+        return f"{self.__class__.__name__}({self.items!r}, {self.inverted!r})"
+
+    @property
+    def items_str(self) -> str:
+        return str(self.items)
+
+    def __str__(self) -> str:
+        """return str(self)"""
+        if self.items:
+            return f"{'¬' if self.inverted else ''}{self.items_str}"
+        else:
+            return 'Ω' if self.inverted else '∅'
+
+    def __contains__(self, item) -> bool:
+        return xor(item in self.items, self.inverted)
+
+    def __invert__(self: T) -> T:
+        return self.__class__(self.items, not self.inverted)
+
+    def __or__(self: T, other: T) -> T:
+        if other.inverted:
+            func = frozenset.intersection if self.inverted else frozenset.difference
+            return self.__class__(func(other.items, self.items), True)
+        else:
+            func = frozenset.difference if self.inverted else frozenset.union
+            return self.__class__(func(self.items, other.items), self.inverted)
+
+    def __and__(self: T, other: T) -> T:
+        if other.inverted:
+            func = frozenset.union if self.inverted else frozenset.difference
+            return self.__class__(func(self.items, other.items), self.inverted)
+        else:
+            func = frozenset.difference if self.inverted else frozenset.intersection
+            return self.__class__(func(other.items, self.items), False)
+
+    def __truediv__(self: T, other: T) -> T:
+        if other.inverted:
+            func = frozenset.difference if self.inverted else frozenset.intersection
+            return self.__class__(func(other.items, self.items), False)
+        else:
+            func = frozenset.union if self.inverted else frozenset.difference
+            return self.__class__(func(self.items, other.items), self.inverted)
+
+    def __add__(self: T, other: Item) -> T:
+        func = self.items.difference if self.inverted else self.items.union
+        return self.__class__(func({other}), self.inverted)
+
+    def __sub__(self: T, other: Item) -> T:
+        func = self.items.union if self.inverted else self.items.difference
+        return self.__class__(func({other}), self.inverted)
+
+    __iand__ = __and__
+    __ior__ = __or__
+    __itruediv__ = __truediv__
+    __iadd__ = __add__
+    __isub__ = __sub__
+
     @property
     def code_factory(self) -> Type[pg.CONDITION]:
         if len(self.items) == 1:
@@ -526,7 +630,7 @@ __all__ += ["Branch", "BranchSet"]
 ########################################################################################################################
 
 @dataclass(frozen=True, order=True)
-class Branch(GenericItem):
+class Branch:
     name: str
     rule: Rule
     priority: int = 0
@@ -571,19 +675,28 @@ class Branch(GenericItem):
             yield Match(group=Group.always(), action=EXCLUDE), VALID
 
 
-class BranchSet(GenericItemSet[Branch]):
+class BranchSet(ArgsHashed):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.branches
+
+    def __init__(self, branches: Iterable[Branch] = None):
+        if branches is None:
+            branches = frozenset()
+        self.branches: FrozenSet[Branch] = frozenset(branches)
+
     def __bool__(self):
-        return bool(self.items)
+        return bool(self.branches)
 
     def terminal_code(self, throw_errors: bool = False) -> Iterator[T_STATE]:
-        valid_branches = [branch for branch in self.items if branch.is_valid]
+        valid_branches = [branch for branch in self.branches if branch.is_valid]
         valid_max_priority = max([branch.priority for branch in valid_branches], default=0)
         valid_names = [T_STATE(branch.name) for branch in valid_branches if branch.priority == valid_max_priority]
 
         if valid_names:
             return valid_names
 
-        error_branches = [branch for branch in self.items if branch.is_error]
+        error_branches = [branch for branch in self.branches if branch.is_error]
         error_max_priority = max([branch.priority for branch in error_branches], default=0)
         error_names = [branch.name for branch in error_branches if branch.priority == error_max_priority]
 
@@ -597,24 +710,24 @@ class BranchSet(GenericItemSet[Branch]):
                     return [T_STATE("!")]
 
     def get_all_cases(self) -> Iterator[Tuple[Group, ACTION, Branch]]:
-        for branch in self.items:
+        for branch in self.branches:
             for first, after in branch.splited:
                 yield first.group, first.action, branch.new_rule(after)
 
     @property
     def only_non_terminals(self) -> BranchSet:
         """Remove the terminal branches"""
-        return BranchSet(frozenset(branch for branch in self.items if not branch.is_terminal))
+        return BranchSet(frozenset(branch for branch in self.branches if not branch.is_terminal))
 
     @property
     def only_valids(self) -> BranchSet:
         """Remove the terminal branches"""
-        return BranchSet(frozenset(branch for branch in self.items if branch.is_valid))
+        return BranchSet(frozenset(branch for branch in self.branches if branch.is_valid))
 
     @property
     def only_errors(self) -> BranchSet:
         """Remove the terminal branches"""
-        return BranchSet(frozenset(branch for branch in self.items if branch.is_error))
+        return BranchSet(frozenset(branch for branch in self.branches if branch.is_error))
 
     def truncated(self, formal: bool):
         if formal:
@@ -627,23 +740,23 @@ class BranchSet(GenericItemSet[Branch]):
 
     @property
     def is_non_terminal(self) -> bool:
-        return any(branch.is_non_terminal for branch in self.items)
+        return any(branch.is_non_terminal for branch in self.branches)
 
     @property
     def is_terminal(self) -> bool:
-        return all(branch.is_terminal for branch in self.items)
+        return all(branch.is_terminal for branch in self.branches)
 
     @property
     def is_valid(self) -> bool:
-        return all(branch.is_valid for branch in self.items)
+        return all(branch.is_valid for branch in self.branches)
 
     @property
     def is_error(self) -> bool:
-        return all(branch.is_error for branch in self.items)
+        return all(branch.is_error for branch in self.branches)
 
     @property
     def alphabet(self) -> FrozenSet[Item]:
-        return frozenset({item for branch in self.items for item in branch.alphabet})
+        return frozenset({item for branch in self.branches for item in branch.alphabet})
 
 
 __all__ += ["Element", "OPTIONS"]

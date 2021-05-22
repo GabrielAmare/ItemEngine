@@ -1,6 +1,6 @@
 from typing import Tuple, Union, List, Optional
 
-from .. import Group, Match, Branch, All, INF, INCLUDE
+from item_engine import Group, Match, Branch, All, INF, INCLUDE, AS as AS_, IN as IN_, include
 from python_generator import LAMBDA, VAR, IF, STR, BLOCK, ARG, SELF, CLASS, METHODS, DEF, AND, EXPRESSION, RETURN, FSTR, \
     ARGS, IMPORT, EQ
 
@@ -81,7 +81,7 @@ class OP:
                 self.matches.append(Match(child.tokenG, INCLUDE))
                 self.as_str += str(child).replace('{', '{{').replace('}', '}}')
             elif isinstance(child, Group):
-                self.matches.append(child.as_(f"c{self.n}"))
+                self.matches.append(Match(child, AS_.format(f"c{self.n}")))
                 self.args.append(VAR("build").CALL(VAR("e").GETATTR("data").GETITEM(STR(f'c{self.n}'))))
                 self.as_str += f"{{self.c{self.n}!s}}"
                 self.n += 1
@@ -129,7 +129,7 @@ class OP:
         br_name = f"__{cls_name.upper()}__"
         return Branch(
             name=br_name,
-            rule=All(tuple(self.matches)),
+            rule=All(*self.matches),
             priority=0,
             transfer=False
         )
@@ -198,9 +198,9 @@ class ENUM:
     def branch(self, cls_name: str):
         br_name = f"__{cls_name.upper()}__"
         if self.s is None:
-            rule = self.g.in_("cs").repeat(2, INF)
+            rule = Match(self.g, IN_.format("cs")).repeat(2, INF)
         else:
-            rule = self.g.in_("cs") & (self.s.tokenG.inc() & self.g.in_("cs")).repeat(1, INF)
+            rule = Match(self.g, IN_.format("cs")) & (include(self.s.tokenG) & Match(self.g, IN_.format("cs"))).repeat(1, INF)
 
         return Branch(
             name=br_name,

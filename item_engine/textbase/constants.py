@@ -1,6 +1,8 @@
 import python_generator as pg
 from .functions import *
 from .materials import SymbolMaker
+from item_engine import include
+
 
 __all__ = [
     "digits", "digits_pow", "digits_bin", "digits_oct", "digits_hex",
@@ -12,26 +14,26 @@ __all__ = [
 ]
 
 # USEFUL CHARSETS
-digits = charset("0123456789").inc()
-digits_pow = charset("⁰¹²³⁴⁵⁶⁷⁸⁹").inc()
-digits_bin = charset("01").inc()
-digits_oct = charset("01234567").inc()
-digits_hex = charset('0123456789' + 'abcdef' + 'ABCDEF').inc()
+digits = include(charset("0123456789"))
+digits_pow = include(charset("⁰¹²³⁴⁵⁶⁷⁸⁹"))
+digits_bin = include(charset("01"))
+digits_oct = include(charset("01234567"))
+digits_hex = include(charset('0123456789' + 'abcdef' + 'ABCDEF'))
 
-letters = charset('abcdefghijklmnopqrstuvwxyz').inc()
-LETTERS = charset('ABCDEFGHIJKLMNOPQRSTUVWXYZ').inc()
-alpha = charset('abcdefghijklmnopqrstuvwxyz' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + '_').inc()
-alphanum = charset('abcdefghijklmnopqrstuvwxyz' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + '_' + '0123456789').inc()
+letters = include(charset('abcdefghijklmnopqrstuvwxyz'))
+LETTERS = include(charset('ABCDEFGHIJKLMNOPQRSTUVWXYZ'))
+alpha = include(charset('abcdefghijklmnopqrstuvwxyz' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + '_'))
+alphanum = include(charset('abcdefghijklmnopqrstuvwxyz' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + '_' + '0123456789'))
 
-dot = charset(".").inc()
+dot = include(charset("."))
 
-n_alphanum = (~alphanum.group).inc()
+n_alphanum = include(~alphanum.group)
 
-sq = charset("'").inc()
-dq = charset('"').inc()
+sq = include(charset("'"))
+dq = include(charset('"'))
 
-n_sq = (~sq.group).inc()
-n_dq = (~dq.group).inc()
+n_sq = include(~sq.group)
+n_dq = include(~dq.group)
 e_sq = string("\\'")
 e_dq = string('\\"')
 

@@ -3,14 +3,14 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Callable, Iterator, Tuple, Optional, Type, Union
+from typing import Dict, List, Callable, Iterator, Tuple, Optional, Type, Union, Iterable, FrozenSet, Hashable
 
 from python_generator import VAR, DEF, ARGS, INT, IF, BLOCK, STR, LIST, IMPORT, \
     RETURN, YIELD, SWITCH, FSTR, EXCEPTION, MODULE, PACKAGE, STATEMENT, ARG
 
-from .generic_items import GenericItem, GenericItemSet, optimized
+# from .generic_items import GenericItem, GenericItemSet
 from .constants import ACTION, STATE, NT_STATE, T_STATE
-from .base import Group, BranchSet, Branch, Element
+from .base import Group, BranchSet, Branch, Element, ArgsHashed, Item
 
 from tools37 import CsvFile
 from graph37 import Node
@@ -25,21 +25,32 @@ class AmbiguityException(Exception):
     pass
 
 
-@dataclass(frozen=True, order=True)
-class ActionToBranch(GenericItem):
-    action: ACTION
-    branch: Branch
+class ActionToBranch:
+    def __init__(self, action: ACTION, branch: Branch):
+        self.action: ACTION = action
+        self.branch: Branch = branch
 
     @property
     def as_group(self) -> Outcome:
         return Outcome({self})
 
 
-class Outcome(GenericItemSet[ActionToBranch]):
+class Outcome(ArgsHashed):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.atbs
+
+    @classmethod
+    def make(cls, outcomes: Iterable[Union[Outcome]]) -> Outcome:
+        return cls([atb for outcome in outcomes for atb in outcome.atbs])
+
+    def __init__(self, atbs: Iterable[ActionToBranch] = None):
+        self.atbs: FrozenSet[ActionToBranch] = frozenset() if atbs is None else frozenset(atbs)
+
     @property
     def action_select(self) -> ActionSelect:
         action_select: ActionSelect = ActionSelect()
-        for atb in self.items:
+        for atb in self.atbs:
             action_select.add(atb.action, atb.branch)
         return action_select
 
@@ -49,7 +60,7 @@ class GroupToOutcome(Dict[Group, Outcome]):
     def from_branch_set(cls, branch_set: BranchSet) -> GroupToOutcome:
         self: GroupToOutcome = cls()
         data = []
-        for branch in branch_set.items:
+        for branch in branch_set.branches:
             for first, after in branch.splited:
                 data.append([str(branch), str(first.group), str(first.action), str(after)])
                 self.add(first.group, first.action, branch.new_rule(after))
@@ -60,16 +71,33 @@ class GroupToOutcome(Dict[Group, Outcome]):
 
         return self
 
-    @property
-    def optimized(self) -> GroupToOutcome:
-        return GroupToOutcome(optimized(self))
+    def optimized(self, group_cls: Type[Group]) -> GroupToOutcome:
+        groups: List[Group] = [group for group in self.keys()]
+
+        explicit_items: List[Item] = sorted(set(item for isk in self for item in isk.items))
+
+        explicit: group_cls = group_cls(explicit_items)
+
+        default = Outcome.make(isv for isk, isv in self.items() if isk.inverted)
+        reverted = {default: ~explicit}
+
+        for item in explicit.items:
+            isv = Outcome.make(isv for isk, isv in self.items() if item in isk)
+            if isv in reverted:
+                reverted[isv] += item
+            else:
+                reverted[isv] = group_cls({item})
+
+        result = GroupToOutcome({isk: isv for isv, isk in reverted.items()})
+
+        return result
 
     def add(self, group: Group, action: ACTION, branch: Branch) -> None:
         atb = ActionToBranch(action, branch)
         if group in self:
-            self[group] |= atb.as_group
+            self[group] = Outcome.make((self[group], Outcome({atb})))
         else:
-            self[group] = atb.as_group
+            self[group] = Outcome({atb})
 
 
 FUNC = Callable[[BranchSet], STATE]
@@ -91,7 +119,7 @@ class TargetSelect:
 
     @property
     def target(self) -> BranchSet:
-        return self.non_terminal_part | BranchSet(self.valid_branches) | BranchSet(self.error_branches)
+        return BranchSet({*self.non_terminal_part.branches, *self.valid_branches, *self.error_branches})
 
     @property
     def priority(self):
@@ -104,7 +132,7 @@ class TargetSelect:
 
     def add_branch(self, branch: Branch) -> None:
         if not branch.is_terminal:
-            self.non_terminal_part += branch
+            self.non_terminal_part = BranchSet({*self.non_terminal_part.branches, branch})
         elif branch.is_valid:
             self.valid_priority = max(self.valid_priority, branch.priority)
             self.valid_branches.append(branch)
@@ -132,6 +160,8 @@ class TargetSelect:
             if valid_branches:
                 raise AmbiguityException("\ntoo many :\n" + "\n".join(f"-> {b!r}" for b in valid_branches))
             else:
+                if len(self.valid_branches) == 1:
+                    return T_STATE(self.valid_branches[0].name)
                 raise AmbiguityException("\nall null :\n" + "\n".join(f"-> {b!r}" for b in self.valid_branches))
 
     def _data_error(self, error_mode: ERROR_MODE) -> T_STATE:
@@ -215,13 +245,18 @@ class GroupSelect(Dict[Group, ActionSelect]):
         return ActionSelect()
 
     def data(self, func: FUNC, formal: bool = False) -> GroupSelectData:
+        def sort(group, action_select) -> tuple:
+            return group.inverted, len(group.items), len(action_select.keys())
+
+        *cases, default = sorted(self.items(), key=lambda item: sort(*item))
+
         return GroupSelectData(
             {
                 group: action_select.data(func, formal)
                 for group, action_select
-                in sorted(self.cases, key=lambda item: len(item[0].items))
+                in cases
             },
-            self.default.data(func, formal)
+            default[1].data(func, formal)
         )
 
 
@@ -241,10 +276,11 @@ class Parser:
                  branch_set: BranchSet,
                  input_cls: Type[Element],
                  output_cls: Type[Element],
+                 group_cls: Type[Group],
                  skips: List[T_STATE],
                  reflexive: bool,
                  formal_inputs: bool,
-                 formal_outputs: bool,
+                 formal_outputs: bool
                  ):
         """
 
@@ -261,6 +297,7 @@ class Parser:
         self.branch_set: BranchSet = branch_set
         self.input_cls: Type[Element] = input_cls
         self.output_cls: Type[Element] = output_cls
+        self.group_cls: Type[Group] = group_cls
         self.reflexive: bool = reflexive
         self.formal_inputs: bool = formal_inputs
         self.formal_outputs: bool = formal_outputs
@@ -295,7 +332,7 @@ class Parser:
             self.branch_sets.append(branch_set)
 
     def extract(self, branch_set: BranchSet) -> GroupSelect:
-        gto: GroupToOutcome = GroupToOutcome.from_branch_set(branch_set).optimized
+        gto: GroupToOutcome = GroupToOutcome.from_branch_set(branch_set).optimized(self.group_cls)
         group_select: GroupSelect = GroupSelect.from_gto(gto)
         return group_select
 

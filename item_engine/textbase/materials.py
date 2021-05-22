@@ -1,7 +1,6 @@
 from typing import Tuple, List, Dict, Type, Union, Optional, Iterable
-from .. import Branch, Group, Rule
+from item_engine import BranchSet, Branch, Group, Rule
 from .items import *
-from .functions import *
 from .base_materials import *
 from .operators import OP, UNIT, ENUM
 from python_generator import MODULE, CLASS, EXPRESSION, IMPORT, DEF, ARG, SWITCH, ISINSTANCE, EXCEPTION, BLOCK, SCOPE, \
@@ -169,12 +168,12 @@ def MakeLexer(
     keyword_branches, keyword_register = gen_keywords(*keywords)
     symbols_branches, symbols_register = gen_symbols(*symbols)
 
-    lexer = make_branch_set(
+    lexer = BranchSet({
         *keyword_branches,
         *symbols_branches,
         *gen_branches(**branches),
         *raw_branches
-    )
+    })
 
     return lexer, keyword_register, symbols_register
 
@@ -190,7 +189,7 @@ def MakeParser(
 
     operators_b, op_register = gen_operators(**operators)
 
-    parser = make_branch_set(
+    parser = BranchSet(
         *operators_b,
         *gen_branches(
             **branches
