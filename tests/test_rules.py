@@ -126,6 +126,9 @@ class TestRules(unittest.TestCase):
         self.assertEqual(first=All(A, A), second=All.make(A, A))
         self.assertEqual(first=All(A, B), second=All.make(A, B))
 
+        self.assertEqual(first=ERROR, second=All.make(A, ERROR))
+        self.assertEqual(first=ERROR, second=All.make(ERROR, A))
+
     def test_004(self):
         """Testing Any.make"""
         A, B = FakeRule("A"), FakeRule("B")

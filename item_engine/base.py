@@ -38,11 +38,11 @@ class ArgsHashed(Hashable):
 
 class Rule(ArgsHashed, ABC):
     def __and__(self, other: Rule) -> Rule:
-        if isinstance(self, Empty):
-            return other if self.valid else self
+        if self == VALID:
+            return other
 
-        if isinstance(other, Empty):
-            return self if other.valid else other
+        if other == VALID:
+            return self
 
         return All.make(self, other)
 
@@ -273,6 +273,9 @@ class All(RuleList):
 
         if len(rules) == 1:
             return rules[0]
+
+        if any(rule == ERROR for rule in rules):
+            return ERROR
 
         return cls(*rules)
 
