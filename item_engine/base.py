@@ -652,7 +652,7 @@ class Branch(RuleUnit):
 
     @property
     def is_skipable(self) -> bool:
-        return False
+        return self.rule.is_skipable
 
     @property
     def is_non_terminal(self) -> bool:
