@@ -249,6 +249,55 @@ class RuleList(Rule):
         return frozenset({item for rule in self.rules for item in rule.alphabet})
 
 
+class RuleSet(Rule):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.rules
+
+    def __init__(self, *rules: Rule):
+        self.rules: FrozenSet[Rule] = frozenset(rules)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({', '.join(map(repr, self.rules))})"
+
+    def __str__(self):
+        raise NotImplementedError
+
+    @property
+    def is_skipable(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_non_terminal(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_terminal(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_valid(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def is_error(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        raise NotImplementedError
+
+    def __iter__(self) -> Iterator[Rule]:
+        return iter(sorted(self.rules))
+
+    def __len__(self) -> int:
+        return len(self.rules)
+
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return frozenset({item for rule in self.rules for item in rule.alphabet})
+
+
 ########################################################################################################################
 # Optional | Repeat | All | Any
 ########################################################################################################################
