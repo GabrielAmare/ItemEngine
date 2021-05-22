@@ -297,10 +297,11 @@ class Parser:
         index = 0
         while index < len(self.branch_sets):
             branch_set: BranchSet = self.branch_sets[index]
+            index += 1
+            
             group_select: GroupSelect = self.extract(branch_set)
             self.origin_select[branch_set] = group_select
             self.include(group_select)
-            index += 1
 
     def include(self, group_select: GroupSelect) -> None:
         for branch_set in group_select.targets:
