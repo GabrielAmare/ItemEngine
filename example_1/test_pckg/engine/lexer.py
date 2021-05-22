@@ -16,35 +16,35 @@ def _lexer(current: Token, item: Char) -> Tuple[ACTION, STATE]:
         elif item.value == '-':
             return '∈', 'DASH'
         elif item.value == '.':
-            return '∈', 3
+            return '∈', 1
         elif item.value == '/':
             return '∈', 'SLASH'
         elif item.value in '0123456789':
             return '∈', 2
         elif item.value in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz':
-            return '∈', 1
+            return '∈', 4
         else:
             return '∉', '!DASH|PLUS|SLASH|STAR'
-    elif current.value == 1:
-        if item.value in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz':
-            return '∈', 1
-        else:
-            return '∉', 'VAR'
     elif current.value == 2:
         if item.value == '.':
-            return '∈', 4
+            return '∈', 3
         elif item.value in '0123456789':
             return '∈', 2
         else:
             return '∉', 'INT'
-    elif current.value == 3:
-        if item.value in '0123456789':
+    elif current.value == 4:
+        if item.value in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz':
             return '∈', 4
         else:
-            return '∉', '!FLOAT'
-    elif current.value == 4:
+            return '∉', 'VAR'
+    elif current.value == 1:
         if item.value in '0123456789':
-            return '∈', 4
+            return '∈', 3
+        else:
+            return '∉', '!FLOAT'
+    elif current.value == 3:
+        if item.value in '0123456789':
+            return '∈', 3
         else:
             return '∉', 'FLOAT'
     else:

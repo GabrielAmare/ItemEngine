@@ -17,4 +17,9 @@ class ArgsHashed(Hashable):
         return hash(self.__args__)
 
     def __lt__(self, other: ArgsHashed):
-        return self.__args__ < other.__args__
+        tA, *A = self.__args__
+        tB, *B = other.__args__
+        if tA is tB:
+            return A < B
+        else:
+            return tA.__name__ < tB.__name__

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Union, List, TypeVar
+from typing import Union, List, TypeVar, Tuple, Hashable, FrozenSet
 from item_engine import Item, Group, Match, Element, INCLUDE, CASE, EXCLUDE
 from python_generator import VAR, CONDITION, TUPLE
 from .chars import Char
@@ -11,6 +11,8 @@ __all__ = ["TokenI", "TokenG", "Token"]
 
 
 class TokenG(Group):
+    items: FrozenSet[TokenI]
+
     @property
     def items_str(self) -> str:
         return '\n'.join(map(repr, sorted([item.name for item in self.items])))
@@ -30,9 +32,13 @@ class TokenG(Group):
         return cls(frozenset(map(TokenI, names)))
 
 
-@dataclass(frozen=True, order=True)
 class TokenI(Item):
-    name: str
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.name
+
+    def __init__(self, name: str):
+        self.name: str = name
 
     def __str__(self):
         return repr(self.name)

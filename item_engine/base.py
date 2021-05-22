@@ -136,7 +136,7 @@ class RuleUnit(Rule, ABC):
 class RuleList(Rule, ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
-        return (type(self), *self.rules)
+        return type(self), tuple(self.rules)
 
     def __init__(self, *rules: Rule):
         self.rules: List[Rule] = list(rules)
@@ -158,7 +158,7 @@ class RuleList(Rule, ABC):
 class RuleSet(Rule, ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
-        return type(self), self.rules
+        return type(self), tuple(sorted(self.rules))
 
     def __init__(self, *rules: Rule):
         self.rules: FrozenSet[Rule] = frozenset(rules)
@@ -633,7 +633,7 @@ class Branch(RuleUnit):
 class BranchSet(ArgsHashed):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
-        return type(self), self.branches
+        return type(self), tuple(sorted(self.branches))
 
     def __init__(self, branches: Iterable[Branch] = None):
         if branches is None:

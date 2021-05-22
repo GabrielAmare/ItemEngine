@@ -1,5 +1,5 @@
 import unittest
-from typing import Tuple, Iterator, FrozenSet
+from typing import Tuple, Iterator, FrozenSet, Hashable
 
 from item_engine.constants import EXCLUDE, INCLUDE
 
@@ -8,7 +8,7 @@ from item_engine.base import *
 
 class FakeRule(Rule):
     @property
-    def __args__(self):
+    def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), \
                self.name, \
                self.alphabet, \

@@ -1,8 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import TypeVar, Tuple, Hashable, FrozenSet
 
-from item_engine import Item, Group, Match, Element, T_STATE, CASE, INDEX
+from item_engine import Item, Group, Match, Element, T_STATE, CASE, INDEX, EOF
 from python_generator import VAR, CONDITION
 
 E = TypeVar("E", bound=Element)
@@ -11,9 +11,11 @@ __all__ = ["Char", "CharI", "CharG"]
 
 
 class CharG(Group):
+    items: FrozenSet[CharI]
+
     @property
     def items_str(self) -> str:
-        s = ''.join(sorted(repr(str(item))[1:-1] for item in self.items))
+        s = ''.join(sorted(repr(item.char)[1:-1] for item in self.items))
         s = s.replace('0123456789', r'\d')
         return repr(s).replace('\\\\', '\\')
 
@@ -25,9 +27,14 @@ class CharG(Group):
         return Match(self, action)
 
 
-@dataclass(frozen=True, order=True)
 class CharI(Item):
-    char: str
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.char
+
+    def __init__(self, char: str):
+        assert len(char) == 1 or char == EOF
+        self.char: str = char
 
     def __str__(self):
         return self.char

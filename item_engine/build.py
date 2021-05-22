@@ -23,7 +23,11 @@ class AmbiguityException(Exception):
     pass
 
 
-class ActionToBranch:
+class ActionToBranch(ArgsHashed):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.action, self.branch
+
     def __init__(self, action: ACTION, branch: Branch):
         self.action: ACTION = action
         self.branch: Branch = branch
@@ -36,7 +40,7 @@ class ActionToBranch:
 class Outcome(ArgsHashed):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
-        return type(self), self.atbs
+        return type(self), tuple(sorted(self.atbs))
 
     @classmethod
     def make(cls, outcomes: Iterable[Union[Outcome]]) -> Outcome:
@@ -325,6 +329,8 @@ class Parser:
         return NT_STATE(self.branch_sets.index(branch_set))
 
     def data(self) -> ParserData:
+        self.branch_sets = sorted(self.branch_sets)  # insure stable indexes
+
         return ParserData(
             name=self.name,
             input_cls=self.input_cls,
