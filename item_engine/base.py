@@ -485,7 +485,7 @@ T = TypeVar("T")
 class Group(ItemInterface, ArgsHashed, ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
-        return type(self), self.items, self.inverted
+        return type(self), self.inverted, tuple(sorted(self.items))
 
     @classmethod
     def never(cls: Type[T]) -> T:
