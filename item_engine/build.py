@@ -229,7 +229,7 @@ class GroupSelect(Dict[Group, ActionSelect]):
             yield from action_select.targets
 
     def data(self, func: FUNC, formal: bool = False) -> GroupSelectData:
-        *cases, default = sorted(self.items(), key=lambda item: item[0])
+        *cases, default = sorted(self.items())
 
         return GroupSelectData(
             {
