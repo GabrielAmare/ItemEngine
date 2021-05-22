@@ -25,6 +25,11 @@ def _lexer(current: Token, item: Char) -> Tuple[ACTION, STATE]:
             return '∈', 4
         else:
             return '∉', '!DASH|PLUS|SLASH|STAR'
+    elif current.value == 1:
+        if item.value in '0123456789':
+            return '∈', 3
+        else:
+            return '∉', '!FLOAT'
     elif current.value == 2:
         if item.value == '.':
             return '∈', 3
@@ -32,21 +37,16 @@ def _lexer(current: Token, item: Char) -> Tuple[ACTION, STATE]:
             return '∈', 2
         else:
             return '∉', 'INT'
-    elif current.value == 4:
-        if item.value in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz':
-            return '∈', 4
-        else:
-            return '∉', 'VAR'
-    elif current.value == 1:
-        if item.value in '0123456789':
-            return '∈', 3
-        else:
-            return '∉', '!FLOAT'
     elif current.value == 3:
         if item.value in '0123456789':
             return '∈', 3
         else:
             return '∉', 'FLOAT'
+    elif current.value == 4:
+        if item.value in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz':
+            return '∈', 4
+        else:
+            return '∉', 'VAR'
     else:
         raise Exception(f'value = {current.value!r}')
 

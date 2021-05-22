@@ -396,7 +396,7 @@ class GroupSelectData:
 
     def code(self, item: VAR, formal: bool) -> Union[IF, BLOCK]:
         return SWITCH(
-            cases=[(group.condition(item), asd.code(item, formal)) for group, asd in self.cases.items()],
+            cases=[(group.condition(item), asd.code(item, formal)) for group, asd in sorted(self.cases.items())],
             default=self.default.code(item, formal)
         )
 
@@ -408,7 +408,7 @@ class OriginSelectData:
     def code(self, current: VAR, item: VAR, formal: bool) -> SWITCH:
         return SWITCH(
             cases=[(current.GETATTR("value").EQ(INT(value)), gsd.code(item, formal)) for value, gsd in
-                   self.cases.items()],
+                   sorted(self.cases.items())],
             default=EXCEPTION(FSTR("value = {current.value!r}")).RAISE()
         )
 
