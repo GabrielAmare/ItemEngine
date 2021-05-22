@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass
-from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Type, Union, Hashable, Iterable
 from functools import reduce
 from operator import and_, xor
+from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Type, Union, Hashable, Iterable
+
+import python_generator as pg
 
 from .constants import ACTION, INCLUDE, EXCLUDE, AS, IN, T_STATE, INDEX, STATE, CASE, NT_STATE, INF, EOF
-import python_generator as pg
 
 __all__ = [
     "Rule", "RuleUnit", "RuleList", "Empty",  # abstracts
