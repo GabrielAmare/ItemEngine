@@ -279,6 +279,9 @@ class All(RuleList):
         return cls(*rules)
 
     def __init__(self, *rules: Rule):
+        assert len(rules) > 1
+        assert not any(isinstance(rule, All) for rule in rules)
+        assert not any(isinstance(rule, Empty) for rule in rules)
         super().__init__(*rules)
 
     @property
@@ -360,7 +363,7 @@ class Any(RuleList):
     def __init__(self, *rules: Rule):
         assert len(rules) > 1
         assert not any(isinstance(rule, Any) for rule in rules)
-        assert not any(isinstance(rule, Empty) for rule in rules[:-1])
+        assert not any(isinstance(rule, Empty) for rule in rules)
         super().__init__(*rules)
 
     def __str__(self):

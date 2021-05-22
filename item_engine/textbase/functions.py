@@ -11,9 +11,9 @@ def charset(s: str) -> CharG:
     return CharG(frozenset(map(CharI, s)))
 
 
-def string(s: str) -> All:
+def string(s: str) -> Rule:
     """Make a Rule that matches the specified string ``s``"""
-    return All(*(include(charset(c)) for c in s))
+    return All.make(*(include(charset(c)) for c in s))
 
 
 def make_characters(text: str, eof: bool = False) -> Iterator[Char]:
