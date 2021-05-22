@@ -38,12 +38,6 @@ class ArgsHashed(Hashable):
 
 class Rule(ArgsHashed, ABC):
     def __and__(self, other: Rule) -> Rule:
-        if self == VALID:
-            return other
-
-        if other == VALID:
-            return self
-
         return All.make(self, other)
 
     def __or__(self, other) -> Rule:
