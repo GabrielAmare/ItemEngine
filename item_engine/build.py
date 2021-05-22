@@ -303,7 +303,7 @@ class Parser:
         while index < len(self.branch_sets):
             branch_set: BranchSet = self.branch_sets[index]
             index += 1
-            
+
             group_select: GroupSelect = self.extract(branch_set)
             self.origin_select[branch_set] = group_select
             self.include(group_select)
@@ -339,24 +339,8 @@ class Parser:
             skips=self.skips
         )
 
-    def to_csv(self, fp: str) -> None:
-        data = []
-
-        for origin, group_select in self.origin_select.items():
-            for group, action_select in (*group_select.cases, (Group.never(), group_select.default)):
-                for action, target_select in action_select.items():
-                    for target_state in target_select.get_target_states(self.get_nt_state):
-                        data.append(dict(
-                            origin=str(self.get_nt_state(origin)),
-                            group=str(group).replace('\n', ''),
-                            action=action,
-                            target=target_state
-                        ))
-
-        CsvFile.save(fp, keys=["origin", "group", "action", "target"], data=data)
-
     @property
-    def graph(self, **config):
+    def graph(self):
         return self.data().graph
 
 
