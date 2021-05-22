@@ -58,21 +58,25 @@ if __name__ == '__main__':
 
 def main():
     content = generate(
+        # VAR
         'x',
-        '1',
         'abc',
+        # INT
+        '1',
         '123',
-        '+',
-        '*',
-        '/',
-        '-',
-        '=',
+        # FLOAT
         '1.',
         '.2',
         '1.2',
         '12.',
         '.12',
         '12.34',
+        # SYMBOLS
+        '+',
+        '*',
+        '/',
+        '-',
+        '=',
     )
     with open('test_preview.py', mode='w', encoding='utf-8') as file:
         file.write(content)
@@ -87,7 +91,6 @@ def main():
     finally:
         if os.path.exists('test_preview.py'):
             os.remove('test_preview.py')
-
 
 
 if __name__ == '__main__':

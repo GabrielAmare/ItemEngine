@@ -191,9 +191,7 @@ def MakeParser(
 
     parser = BranchSet(
         *operators_b,
-        *gen_branches(
-            **branches
-        )
+        *gen_branches(**branches)
     )
 
     return parser, op_register

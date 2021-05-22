@@ -4,25 +4,34 @@ __all__ = ['engine']
 
 not_eof = CharG({CharI(char=EOF)}, True).inc()
 
-lexer, kws, sym = MakeLexer(keywords=[], symbols=[
-    ' + ', ' - ', ' / ', ' * ', ' = '
-], branches={
-    "VAR": alpha & alphanum.repeat(0, INF),
-    "INT": digits.repeat(1, INF),
-    "FLOAT": digits.repeat(1, INF) & dot & digits.repeat(0, INF) | dot & digits.repeat(1, INF),
-    "WHITESPACE": charset(" \t").inc().repeat(1, INF)
-})
+lexer, kws, sym = MakeLexer(
+    keywords=[],
+    symbols=[
+        ' + ', ' - ', ' / ', ' * ', ' = '
+    ],
+    branches={
+        "VAR": alpha & alphanum.repeat(0, INF),
+        "INT": digits.repeat(1, INF),
+        "FLOAT": digits.repeat(1, INF) & dot & digits.repeat(0, INF) | dot & digits.repeat(1, INF),
+        "WHITESPACE": charset(" \t").inc().repeat(1, INF)
+    }
+)
 
 # grp = GroupMaker({
 #     "unit": ["VAR", "INT"]
 # })
 #
-# parser, operators = MakeParser(operators={
-#     "Var": UNIT(n="VAR", k="name", t=str),
-#     "Int": UNIT(n="INT", k="value", t=int),
+# parser, operators = MakeParser(
+#     operators={
+#         "Var": UNIT(n="VAR", k="name", t=str),
+#         "Int": UNIT(n="INT", k="value", t=int),
 #
-#     "Add": OP(grp["unit"], sym['+'], grp['unit'])
-# }, branches={})
+#         "Add": OP(grp["unit"], sym['+'], grp['unit'])
+#     },
+#     branches={
+#
+#     }
+# )
 
 engine = Engine(
     name='engine',
@@ -43,6 +52,7 @@ engine = Engine(
         #     branch_set=parser,
         #     input_cls=Char,
         #     output_cls=Token,
+        #     group_cls=TokenG,
         #     formal_inputs=True,
         #     formal_outputs=True,
         #     reflexive=False,

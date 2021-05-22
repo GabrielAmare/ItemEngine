@@ -25,20 +25,20 @@ def test(text: str, expected):
 
 def main():
     test('x', [Token(at=0, to=1, value='VAR', content='x'), Token(at=1, to=1, value='EOF', content='')])
-    test('1', [Token(at=0, to=1, value='INT', content='1'), Token(at=1, to=1, value='EOF', content='')])
     test('abc', [Token(at=0, to=1, value='VAR', content='abc'), Token(at=1, to=1, value='EOF', content='')])
+    test('1', [Token(at=0, to=1, value='INT', content='1'), Token(at=1, to=1, value='EOF', content='')])
     test('123', [Token(at=0, to=1, value='INT', content='123'), Token(at=1, to=1, value='EOF', content='')])
-    test('+', [Token(at=0, to=1, value='PLUS', content='+'), Token(at=1, to=1, value='EOF', content='')])
-    test('*', [Token(at=0, to=1, value='STAR', content='*'), Token(at=1, to=1, value='EOF', content='')])
-    test('/', [Token(at=0, to=1, value='SLASH', content='/'), Token(at=1, to=1, value='EOF', content='')])
-    test('-', [Token(at=0, to=1, value='DASH', content='-'), Token(at=1, to=1, value='EOF', content='')])
-    test('=', [Token(at=0, to=1, value='EQUAL', content='='), Token(at=1, to=1, value='EOF', content='')])
     test('1.', [Token(at=0, to=1, value='FLOAT', content='1.'), Token(at=1, to=1, value='EOF', content='')])
     test('.2', [Token(at=0, to=1, value='FLOAT', content='.2'), Token(at=1, to=1, value='EOF', content='')])
     test('1.2', [Token(at=0, to=1, value='FLOAT', content='1.2'), Token(at=1, to=1, value='EOF', content='')])
     test('12.', [Token(at=0, to=1, value='FLOAT', content='12.'), Token(at=1, to=1, value='EOF', content='')])
     test('.12', [Token(at=0, to=1, value='FLOAT', content='.12'), Token(at=1, to=1, value='EOF', content='')])
     test('12.34', [Token(at=0, to=1, value='FLOAT', content='12.34'), Token(at=1, to=1, value='EOF', content='')])
+    test('+', [Token(at=0, to=1, value='PLUS', content='+'), Token(at=1, to=1, value='EOF', content='')])
+    test('*', [Token(at=0, to=1, value='STAR', content='*'), Token(at=1, to=1, value='EOF', content='')])
+    test('/', [Token(at=0, to=1, value='SLASH', content='/'), Token(at=1, to=1, value='EOF', content='')])
+    test('-', [Token(at=0, to=1, value='DASH', content='-'), Token(at=1, to=1, value='EOF', content='')])
+    test('=', [Token(at=0, to=1, value='EQUAL', content='='), Token(at=1, to=1, value='EOF', content='')])
 
 
 if __name__ == '__main__':
