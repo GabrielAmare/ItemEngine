@@ -629,15 +629,18 @@ __all__ += ["Branch", "BranchSet"]
 # Branch & BranchSet
 ########################################################################################################################
 
-@dataclass(frozen=True, order=True)
-class Branch:
-    name: str
-    rule: Rule
-    priority: int = 0
+class Branch(ArgsHashed):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.name, self.rule, self.priority
 
+    def __init__(self, name: str, rule: Rule, priority: int = 0):
+        self.name: str = name
+        self.rule: Rule = rule
+        self.priority: int = priority
 
     def new_rule(self, rule: Rule) -> Branch:
-        return replace(self, rule=rule)
+        return Branch(self.name, rule, self.priority)
 
     def __str__(self):
         return f"{self.name!s}[{self.priority}] : {self.rule!s}"
