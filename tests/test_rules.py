@@ -146,6 +146,12 @@ class TestRules(unittest.TestCase):
         self.assertEqual(first=A, second=Any.make(A, A))
         self.assertEqual(first=Any(A, B), second=Any.make(A, B))
 
+        self.assertEqual(first=A, second=Any.make(A, ERROR))
+        self.assertEqual(first=A, second=Any.make(ERROR, A))
+
+        self.assertEqual(first=VALID, second=Any.make(A, VALID))
+        self.assertEqual(first=VALID, second=Any.make(VALID, A))
+
     def test_005(self):
         """Testing Group.never / Group.is_never / Group.always / Group.is_always"""
         self.assertTrue(Group.always().is_always)

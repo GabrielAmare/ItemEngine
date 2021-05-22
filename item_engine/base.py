@@ -41,12 +41,6 @@ class Rule(ArgsHashed, ABC):
         return All.make(self, other)
 
     def __or__(self, other) -> Rule:
-        if isinstance(self, Empty):
-            return other
-
-        if isinstance(other, Empty):
-            return self
-
         return Any.make(self, other)
 
     def __repr__(self):
@@ -334,16 +328,29 @@ class Any(RuleList):
         return cls.make(*args)
 
     @classmethod
+    def _flat(cls, *args: Rule) -> Iterable[Rule]:
+        for arg in args:
+            if isinstance(arg, cls):
+                yield from cls._flat(*arg.rules)
+            else:
+                yield arg
+
+    @classmethod
     def make(cls, *args: Rule):
         rules: List[Rule] = []
 
-        for arg in args:
-            if isinstance(arg, cls):
-                for rule in arg.rules:
-                    if rule not in rules:
-                        rules.append(rule)
-            elif arg not in rules:
+        for arg in cls._flat(*args):
+            if arg == ERROR:
+                continue
+
+            if arg == VALID:
+                return VALID
+
+            if arg not in rules:
                 rules.append(arg)
+
+        if len(rules) == 0:
+            return ERROR
 
         if len(rules) == 1:
             return rules[0]
