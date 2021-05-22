@@ -5,16 +5,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Callable, Iterator, Tuple, Optional, Type, Union, Iterable, FrozenSet, Hashable
 
+from graph37 import Node
 from python_generator import VAR, DEF, ARGS, INT, IF, BLOCK, STR, LIST, IMPORT, \
     RETURN, YIELD, SWITCH, FSTR, EXCEPTION, MODULE, PACKAGE, STATEMENT, ARG
 
+from .BuilderGraph import BuilderGraph
+from .base import Group, BranchSet, Branch, Element, ArgsHashed, Item
 # from .generic_items import GenericItem, GenericItemSet
 from .constants import ACTION, STATE, NT_STATE, T_STATE
-from .base import Group, BranchSet, Branch, Element, ArgsHashed, Item
-
-from tools37 import CsvFile
-from graph37 import Node
-from .BuilderGraph import BuilderGraph
 
 DEBUG_GROUP_TO_OUTCOME = False
 
