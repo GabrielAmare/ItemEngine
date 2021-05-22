@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from abc import ABC
 from dataclasses import dataclass
 from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Type, Union, Hashable, Iterable
 from functools import reduce
@@ -33,17 +35,7 @@ class ArgsHashed(Hashable):
 # Rule
 ########################################################################################################################
 
-class Rule(ArgsHashed):
-    @property
-    def __args__(self) -> Tuple[Hashable, ...]:
-        raise NotImplementedError
-
-    def __repr__(self):
-        raise NotImplementedError
-
-    def __str__(self):
-        raise NotImplementedError
-
+class Rule(ArgsHashed, ABC):
     def __and__(self, other: Rule) -> Rule:
         if isinstance(self, Empty):
             return other if self.valid else self
@@ -61,6 +53,12 @@ class Rule(ArgsHashed):
             return self
 
         return Any(*self.any, *other.any)
+
+    def __repr__(self):
+        raise NotImplementedError
+
+    def __str__(self):
+        raise NotImplementedError
 
     @property
     def is_skipable(self) -> bool:
@@ -157,7 +155,7 @@ VALID = Empty(True)
 ERROR = Empty(False)
 
 
-class RuleUnit(Rule):
+class RuleUnit(Rule, ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), self.rule
@@ -168,39 +166,12 @@ class RuleUnit(Rule):
     def __repr__(self):
         return f"{self.__class__.__name__}({self.rule!r})"
 
-    def __str__(self):
-        raise NotImplementedError
-
-    @property
-    def is_skipable(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_non_terminal(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_terminal(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_valid(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_error(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def splited(self) -> Iterator[Tuple[Match, Rule]]:
-        raise NotImplementedError
-
     @property
     def alphabet(self) -> FrozenSet[Item]:
         return self.rule.alphabet
 
 
-class RuleList(Rule):
+class RuleList(Rule, ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return (type(self), *self.rules)
@@ -210,33 +181,6 @@ class RuleList(Rule):
 
     def __repr__(self):
         return f"{self.__class__.__name__}({', '.join(map(repr, self.rules))})"
-
-    def __str__(self):
-        raise NotImplementedError
-
-    @property
-    def is_skipable(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_non_terminal(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_terminal(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_valid(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_error(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def splited(self) -> Iterator[Tuple[Match, Rule]]:
-        raise NotImplementedError
 
     def __iter__(self) -> Iterator[Rule]:
         return iter(self.rules)
@@ -249,7 +193,7 @@ class RuleList(Rule):
         return frozenset({item for rule in self.rules for item in rule.alphabet})
 
 
-class RuleSet(Rule):
+class RuleSet(Rule, ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), self.rules
@@ -259,33 +203,6 @@ class RuleSet(Rule):
 
     def __repr__(self):
         return f"{self.__class__.__name__}({', '.join(map(repr, self.rules))})"
-
-    def __str__(self):
-        raise NotImplementedError
-
-    @property
-    def is_skipable(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_non_terminal(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_terminal(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_valid(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_error(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def splited(self) -> Iterator[Tuple[Match, Rule]]:
-        raise NotImplementedError
 
     def __iter__(self) -> Iterator[Rule]:
         return iter(sorted(self.rules))
@@ -302,7 +219,7 @@ class RuleSet(Rule):
 # Optional | Repeat | All | Any
 ########################################################################################################################
 
-class Skipable(RuleUnit):
+class Skipable(RuleUnit, ABC):
     is_skipable: bool = True
     is_non_terminal: bool = True
     is_terminal: bool = False
@@ -321,13 +238,6 @@ class Skipable(RuleUnit):
             rule = rule.rule
 
         return cls(rule)
-
-    @property
-    def splited(self) -> Iterator[Tuple[Match, Rule]]:
-        raise NotImplementedError
-
-    def __str__(self):
-        raise NotImplementedError
 
 
 class Optional(Skipable):
@@ -511,11 +421,7 @@ class Match(Rule):
 __all__ += ["Item", "Group"]
 
 
-class ItemInterface(ArgsHashed):
-    @property
-    def __args__(self) -> Tuple[Hashable, ...]:
-        raise NotImplementedError
-
+class ItemInterface(ArgsHashed, ABC):
     def match(self, action: ACTION) -> Match:
         if isinstance(self, Item):
             return Match(self.as_group, action)
@@ -542,11 +448,7 @@ class ItemInterface(ArgsHashed):
     in_ = include_in
 
 
-class Item(ItemInterface):
-    @property
-    def __args__(self) -> Tuple[Hashable, ...]:
-        raise NotImplementedError
-
+class Item(ItemInterface, ABC):
     @property
     def as_group(self) -> Group:
         raise NotImplementedError
@@ -566,7 +468,7 @@ E = TypeVar("E", bound=Item)
 T = TypeVar("T")
 
 
-class Group(ItemInterface, ArgsHashed):
+class Group(ItemInterface, ArgsHashed, ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), self.items, self.inverted
