@@ -1,23 +1,36 @@
 import unittest
-from typing import List, Tuple, Callable, Iterator, FrozenSet
+from typing import Tuple, Iterator, FrozenSet
 
 from item_engine.base import *
 
 
 class FakeRule(Rule):
-    alphabet: FrozenSet[Item] = frozenset()
-    is_skipable: bool = False
-    is_non_terminal: bool = True
-    is_terminal: bool = False
-    is_valid: bool = False
-    is_error: bool = False
-
     @property
     def __args__(self):
-        return type(self), self.name
+        return type(self), \
+               self.name, \
+               self.alphabet, \
+               self.is_skipable, \
+               self.is_non_terminal, \
+               self.is_terminal, \
+               self.is_valid, \
+               self.is_error
 
-    def __init__(self, name: str):
+    def __init__(self, name: str,
+                 is_skipable: bool = False,
+                 is_non_terminal: bool = True,
+                 is_terminal: bool = False,
+                 is_valid: bool = False,
+                 is_error: bool = False,
+                 alphabet: FrozenSet[Item] = frozenset(),
+                 ):
         self.name: str = name
+        self._alphabet: FrozenSet[Item] = alphabet
+        self._is_skipable: bool = is_skipable
+        self._is_non_terminal: bool = is_non_terminal
+        self._is_terminal: bool = is_terminal
+        self._is_valid: bool = is_valid
+        self._is_error: bool = is_error
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name!r})"
@@ -26,12 +39,36 @@ class FakeRule(Rule):
         return self.name
 
     @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return self._alphabet
+
+    @property
+    def is_skipable(self) -> bool:
+        return self._is_skipable
+
+    @property
+    def is_non_terminal(self) -> bool:
+        return self._is_non_terminal
+
+    @property
+    def is_terminal(self) -> bool:
+        return self._is_terminal
+
+    @property
+    def is_valid(self) -> bool:
+        return self._is_valid
+
+    @property
+    def is_error(self) -> bool:
+        return self._is_error
+
+    @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
         raise NotImplementedError
 
 
 class TestRules(unittest.TestCase):
-    def test_OPTIONAL(self):
+    def test_001(self):
         """Testing Optional.make"""
         A, B = FakeRule("A"), FakeRule("B")
 
@@ -43,7 +80,7 @@ class TestRules(unittest.TestCase):
         self.assertEqual(first=VALID, second=Optional.make(VALID))
         self.assertEqual(first=VALID, second=Optional.make(ERROR))
 
-    def test_REPEAT(self):
+    def test_002(self):
         """Testing Repeat.make"""
         A, B = FakeRule("A"), FakeRule("B")
 
@@ -55,7 +92,7 @@ class TestRules(unittest.TestCase):
         self.assertEqual(first=VALID, second=Repeat.make(VALID))
         self.assertEqual(first=VALID, second=Repeat.make(ERROR))
 
-    def test_ALL(self):
+    def test_003(self):
         """Testing All.make"""
         A, B = FakeRule("A"), FakeRule("B")
 
@@ -69,7 +106,7 @@ class TestRules(unittest.TestCase):
         self.assertEqual(first=All(A, A), second=All.make(A, A))
         self.assertEqual(first=All(A, B), second=All.make(A, B))
 
-    def test_ANY(self):
+    def test_004(self):
         """Testing Any.make"""
         A, B = FakeRule("A"), FakeRule("B")
 
