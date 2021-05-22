@@ -229,10 +229,7 @@ class GroupSelect(Dict[Group, ActionSelect]):
             yield from action_select.targets
 
     def data(self, func: FUNC, formal: bool = False) -> GroupSelectData:
-        def sort(group, action_select) -> tuple:
-            return (group.inverted, len(group.items), *sorted(group.items))
-
-        *cases, default = sorted(self.items(), key=lambda item: sort(*item))
+        *cases, default = sorted(self.items(), key=lambda item: item[0])
 
         return GroupSelectData(
             {
