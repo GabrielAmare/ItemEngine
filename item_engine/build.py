@@ -228,22 +228,6 @@ class GroupSelect(Dict[Group, ActionSelect]):
         for action_select in self.values():
             yield from action_select.targets
 
-    @property
-    def cases(self) -> Iterator[Tuple[Group, ActionSelect]]:
-        for group, action_select in self.items():
-            if not group.inverted:
-                yield group, action_select
-
-    @property
-    def default(self) -> ActionSelect:
-        # TODO : check if no default means that all items are handled by the cases,
-        #  in this case : an optimization could be to take the more time-consuming case as default
-        #  (and therefore not having to verify it)
-        for group, action_select in self.items():
-            if group.inverted:
-                return action_select
-        return ActionSelect()
-
     def data(self, func: FUNC, formal: bool = False) -> GroupSelectData:
         def sort(group, action_select) -> tuple:
             return (group.inverted, len(group.items), *sorted(group.items))
