@@ -44,7 +44,7 @@ class Rule(ArgsHashed, ABC):
         if isinstance(other, Empty):
             return self if other.valid else other
 
-        return All(*self.all, *other.all)
+        return All.make(self, other)
 
     def __or__(self, other) -> Rule:
         if isinstance(self, Empty):
@@ -53,7 +53,7 @@ class Rule(ArgsHashed, ABC):
         if isinstance(other, Empty):
             return self
 
-        return Any(*self.any, *other.any)
+        return Any.make(self, other)
 
     def __repr__(self):
         raise NotImplementedError
@@ -89,31 +89,18 @@ class Rule(ArgsHashed, ABC):
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
         raise NotImplementedError
 
-    def repeat(self: Union[Repeat, Optional, All, Any, Match, Empty], mn: int = 0, mx: int = INF) -> Rule:
+    def repeat(self, mn: int = 0, mx: int = INF) -> Rule:
         assert mn >= 0
         assert mx == -1 or (mx >= mn and mx > 0)
 
-        if mn == 0:
-            base = Empty(valid=True)
-        else:
-            base = All(*(mn * self.all))
+        prefix = VALID if mn == 0 else All.join(self for _ in range(mn))
+        suffix = Repeat.make(self) if mx == INF else All.join(self for _ in range(mx - mn))
 
-        if mx == INF:
-            return base & Repeat(self)
-        else:
-            return base & All(*((mx - mn) * self.all))
+        return All.make(prefix, suffix)
 
     @property
-    def optional(self: Union[Repeat, Optional, All, Any, Match, Empty]) -> Union[Repeat, Optional, Empty]:
-        return Optional(self)
-
-    @property
-    def all(self) -> List[Rule]:
-        return list(self.rules) if isinstance(self, All) else [self]
-
-    @property
-    def any(self) -> List[Rule]:
-        return list(self.rules) if isinstance(self, Any) else [self]
+    def optional(self: Rule) -> Union[Skipable, Empty]:
+        return Optional.make(self)
 
 
 ########################################################################################################################
