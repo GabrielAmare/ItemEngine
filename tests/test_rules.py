@@ -31,12 +31,8 @@ class FakeRule(Rule):
 
 
 class TestRules(unittest.TestCase):
-    def _test_fabric(self, fabric: Callable, cases: List[Tuple[List[Rule], Rule]]):
-        for inputs, output in cases:
-            self.assertEqual(first=output, second=fabric(*inputs))
-
     def test_OPTIONAL(self):
-        """Testing the OPTIONAL fabric"""
+        """Testing Optional.make"""
         A, B = FakeRule("A"), FakeRule("B")
 
         self.assertEqual(first=Optional(All(A, B)), second=Optional.make(All(A, B)))
@@ -48,7 +44,7 @@ class TestRules(unittest.TestCase):
         self.assertEqual(first=VALID, second=Optional.make(ERROR))
 
     def test_REPEAT(self):
-        """Testing the REPEAT fabric"""
+        """Testing Repeat.make"""
         A, B = FakeRule("A"), FakeRule("B")
 
         self.assertEqual(first=Repeat(All(A, B)), second=Repeat.make(All(A, B)))
@@ -60,7 +56,7 @@ class TestRules(unittest.TestCase):
         self.assertEqual(first=VALID, second=Repeat.make(ERROR))
 
     def test_ALL(self):
-        """Testing the ALL fabric"""
+        """Testing All.make"""
         A, B = FakeRule("A"), FakeRule("B")
 
         self.assertEqual(first=All(A, B), second=All.make(All(A, B)))
@@ -74,7 +70,7 @@ class TestRules(unittest.TestCase):
         self.assertEqual(first=All(A, B), second=All.make(A, B))
 
     def test_ANY(self):
-        """Testing the ANY fabric : All, Any, Repeat, Optional, Match, Empty"""
+        """Testing Any.make"""
         A, B = FakeRule("A"), FakeRule("B")
 
         self.assertEqual(first=All(A, B), second=Any.make(All(A, B)))
