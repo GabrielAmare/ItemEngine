@@ -4,15 +4,11 @@ from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Generic, Type, Uni
 from functools import reduce
 from operator import and_
 
-from .constants import ACTION, INCLUDE, EXCLUDE, AS, IN, T_STATE, INDEX, STATE, CASE, NT_STATE
+from .constants import ACTION, INCLUDE, EXCLUDE, AS, IN, T_STATE, INDEX, STATE, CASE, NT_STATE, INF, EOF
 from .generic_items import GenericItem, GenericItemSet
 import python_generator as pg
 
-INF = -1
-EOF = "EOF"
-
 __all__ = [
-    "INF", "EOF",  # constants
     "Rule", "RuleUnit", "RuleList", "Empty",  # abstracts
     "Optional", "Repeat", "All", "Any",  # composed
     "Match", "VALID", "ERROR"  # simple

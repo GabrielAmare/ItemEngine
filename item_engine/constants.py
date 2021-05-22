@@ -4,7 +4,7 @@ __all__ = [
     "NT_STATE", "T_STATE", "STATE",
     "INDEX", "POSITION",
     "ACTION", "INCLUDE", "EXCLUDE", "AS", "IN",
-    "CASE",
+    "CASE", "EOF", "INF", "ERROR_PREFIX"
 ]
 
 ACTION = str
@@ -21,3 +21,7 @@ AS: ACTION = "as:{}"
 IN: ACTION = "in:{}"
 
 CASE = Tuple[ACTION, STATE]
+
+EOF = "EOF"
+INF = -1
+ERROR_PREFIX = "!"
