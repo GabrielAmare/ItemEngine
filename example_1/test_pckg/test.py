@@ -1,9 +1,17 @@
-from example_1.test_pckg.make import engine
-
-engine.build(allow_overwrite=True)
-
-from example_1.test_pckg.engine import parse
 from item_engine.textbase import make_characters, Token
+
+try:
+    from example_1.test_pckg.make import engine
+    engine.build(allow_overwrite=True)
+
+except ImportError:
+    raise Exception("[TEST APPLICATION] : engine build failure !")
+
+try:
+    from example_1.test_pckg.engine import parse
+
+except ImportError:
+    raise Exception("[TEST APPLICATION] : generated code failure !")
 
 
 def get(text: str):
@@ -13,16 +21,24 @@ def get(text: str):
 def test(text: str, expected):
     result = list(get(text))
     assert expected == result, f"\ntext = {text!r}\nexpected = {expected!r}\nresult = {result!r}"
-    # print(f"    test({text!r}, {result!r})")
 
 
 def main():
-    test('myVariable', [Token(at=0, to=10, value='VAR', content='myVariable'), Token(at=10, to=10, value='EOF', content='')])
-    test('12345', [Token(at=0, to=5, value='INT', content='12345'), Token(at=5, to=5, value='EOF', content='')])
-    test('12.34', [Token(at=0, to=5, value='FLOAT', content='12.34'), Token(at=5, to=5, value='EOF', content='')])
+    test('x', [Token(at=0, to=1, value='VAR', content='x'), Token(at=1, to=1, value='EOF', content='')])
     test('1', [Token(at=0, to=1, value='INT', content='1'), Token(at=1, to=1, value='EOF', content='')])
-    test('.1', [Token(at=0, to=2, value='FLOAT', content='.1'), Token(at=2, to=2, value='EOF', content='')])
-    test('1.', [Token(at=0, to=2, value='FLOAT', content='1.'), Token(at=2, to=2, value='EOF', content='')])
+    test('abc', [Token(at=0, to=1, value='VAR', content='abc'), Token(at=1, to=1, value='EOF', content='')])
+    test('123', [Token(at=0, to=1, value='INT', content='123'), Token(at=1, to=1, value='EOF', content='')])
+    test('+', [Token(at=0, to=1, value='PLUS', content='+'), Token(at=1, to=1, value='EOF', content='')])
+    test('*', [Token(at=0, to=1, value='STAR', content='*'), Token(at=1, to=1, value='EOF', content='')])
+    test('/', [Token(at=0, to=1, value='SLASH', content='/'), Token(at=1, to=1, value='EOF', content='')])
+    test('-', [Token(at=0, to=1, value='DASH', content='-'), Token(at=1, to=1, value='EOF', content='')])
+    test('=', [Token(at=0, to=1, value='EQUAL', content='='), Token(at=1, to=1, value='EOF', content='')])
+    test('1.', [Token(at=0, to=1, value='FLOAT', content='1.'), Token(at=1, to=1, value='EOF', content='')])
+    test('.2', [Token(at=0, to=1, value='FLOAT', content='.2'), Token(at=1, to=1, value='EOF', content='')])
+    test('1.2', [Token(at=0, to=1, value='FLOAT', content='1.2'), Token(at=1, to=1, value='EOF', content='')])
+    test('12.', [Token(at=0, to=1, value='FLOAT', content='12.'), Token(at=1, to=1, value='EOF', content='')])
+    test('.12', [Token(at=0, to=1, value='FLOAT', content='.12'), Token(at=1, to=1, value='EOF', content='')])
+    test('12.34', [Token(at=0, to=1, value='FLOAT', content='12.34'), Token(at=1, to=1, value='EOF', content='')])
 
 
 if __name__ == '__main__':

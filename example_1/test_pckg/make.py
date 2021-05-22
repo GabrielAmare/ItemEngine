@@ -5,11 +5,12 @@ __all__ = ['engine']
 not_eof = CharG({CharI(char=EOF)}, True).inc()
 
 lexer, kws, sym = MakeLexer(keywords=[], symbols=[
-    ' + ', ' - ', ' / ', ' * '
+    ' + ', ' - ', ' / ', ' * ', ' = '
 ], branches={
     "VAR": alpha & alphanum.repeat(0, INF),
     "INT": digits.repeat(1, INF),
-    "FLOAT": digits.repeat(1, INF) & dot & digits.repeat(0, INF) | dot & digits.repeat(1, INF)
+    "FLOAT": digits.repeat(1, INF) & dot & digits.repeat(0, INF) | dot & digits.repeat(1, INF),
+    "WHITESPACE": charset(" \t").inc().repeat(1, INF)
 })
 
 # grp = GroupMaker({
@@ -35,7 +36,7 @@ engine = Engine(
             formal_inputs=True,
             formal_outputs=True,
             reflexive=False,
-            skips=[]
+            skips=["WHITESPACE"]
         ),
         # Parser(
         #     name='parser',
