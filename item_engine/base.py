@@ -337,7 +337,7 @@ class All(RuleList):
         return " & ".join(map(str, self.rules))
 
 
-class Any(RuleList):
+class Any(RuleSet):
     @classmethod
     def join(cls, args: Iterable[RuleCast]):
         return cls.make(*args)
