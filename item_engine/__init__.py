@@ -4,7 +4,7 @@ item_engine :
 """
 from .constants import *
 from .base import *
-# from .items import *
+from .items import *
 # from .Element import *
 # from .rules import *
 from .build import *
