@@ -701,9 +701,6 @@ class BranchSet(RuleSet):
         assert all(isinstance(rule, Branch) for rule in rules), list(map(type, rules))
         super().__init__(*rules)
 
-    def __bool__(self):
-        return bool(self.rules)
-
     def __str__(self):
         pass
 
@@ -712,55 +709,6 @@ class BranchSet(RuleSet):
         for branch in self.rules:
             for match, after in branch.splited:
                 yield match, after
-
-    def terminal_code(self, throw_errors: bool = False) -> Iterator[T_STATE]:
-        valid_branches = [branch for branch in self.rules if branch.is_valid]
-        valid_max_priority = max([branch.priority for branch in valid_branches], default=0)
-        valid_names = [T_STATE(branch.name) for branch in valid_branches if branch.priority == valid_max_priority]
-
-        if valid_names:
-            return valid_names
-
-        error_branches = [branch for branch in self.rules if branch.is_error]
-        error_max_priority = max([branch.priority for branch in error_branches], default=0)
-        error_names = [branch.name for branch in error_branches if branch.priority == error_max_priority]
-
-        if error_names:
-            if throw_errors:
-                return []
-            else:
-                if error_names:
-                    return [T_STATE("!" + "|".join(error_names))]
-                else:
-                    return [T_STATE("!")]
-
-    def get_all_cases(self) -> Iterator[Tuple[Group, ACTION, Branch]]:
-        for match, branch in self.splited:
-            yield match.group, match.action, branch
-
-    @property
-    def only_non_terminals(self) -> BranchSet:
-        """Remove the terminal branches"""
-        return BranchSet.join(branch for branch in self.rules if not branch.is_terminal)
-
-    @property
-    def only_valids(self) -> BranchSet:
-        """Remove the terminal branches"""
-        return BranchSet.join(branch for branch in self.rules if branch.is_valid)
-
-    @property
-    def only_errors(self) -> BranchSet:
-        """Remove the terminal branches"""
-        return BranchSet.join(branch for branch in self.rules if branch.is_error)
-
-    def truncated(self, formal: bool):
-        if formal:
-            valid_part = self.only_valids
-            error_part = self.only_errors
-            non_terminal_part = self.only_non_terminals
-            return non_terminal_part or valid_part or error_part
-        else:
-            return self
 
     @property
     def is_skipable(self) -> bool:
