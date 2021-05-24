@@ -4,7 +4,7 @@ from abc import ABC
 from dataclasses import dataclass
 from functools import reduce
 from operator import and_
-from typing import Tuple, Iterator, FrozenSet, List, Union, Hashable, Iterable, Collection
+from typing import Tuple, Iterator, FrozenSet, List, Union, Hashable, Iterable, Collection, TypeVar, Generic
 
 from .constants import ACTION, INCLUDE, EXCLUDE, T_STATE, INDEX, STATE, CASE, NT_STATE, INF, EOF
 from .items import Item, Group
@@ -65,22 +65,6 @@ class Rule(ArgsHashed, ABC):
         raise NotImplementedError
 
     @property
-    def is_non_terminal(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_terminal(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_valid(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_error(self) -> bool:
-        raise NotImplementedError
-
-    @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
         raise NotImplementedError
 
@@ -98,17 +82,22 @@ class Rule(ArgsHashed, ABC):
         return Optional.make(self)
 
 
-class RuleUnit(Rule, ABC):
+T = TypeVar("T", bound=Rule)
+
+
 class RuleLeaf(Rule, ABC):
     """A RuleLeaf contains 0 sub-rule"""
 
+
+class RuleUnit(Rule, Generic[T], ABC):
+    """A RuleLeaf contains 1 sub-rule"""
 
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), self.rule
 
-    def __init__(self, rule: Rule):
-        self.rule: Rule = rule
+    def __init__(self, rule: T):
+        self.rule: T = rule
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.rule!r})"
@@ -118,8 +107,13 @@ class RuleLeaf(Rule, ABC):
         return self.rule.alphabet
 
 
-class RuleColl(Rule, ABC):
-    rules: Collection[Rule]
+class RuleColl(Rule, Generic[T], ABC):
+    """A RuleLeaf contains 2 or more sub-rules"""
+    rules: Collection[T]
+
+    def __init__(self, rules: Collection[T]):
+        assert len(rules) > 1
+        self.rules: Collection[T] = rules
 
     def __repr__(self):
         return f"{self.__class__.__name__}({', '.join(map(repr, self))})"
@@ -131,43 +125,37 @@ class RuleColl(Rule, ABC):
     def __len__(self) -> int:
         return len(self.rules)
 
-    def __iter__(self) -> Iterator[Rule]:
+    def __iter__(self) -> Iterator[T]:
         raise NotImplementedError
 
 
-class RuleList(RuleColl, ABC):
+class RuleList(RuleColl[T], Generic[T], ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), tuple(self.rules)
 
-    def __init__(self, *rules: Rule):
-        assert len(rules) > 1
-        self.rules: List[Rule] = list(rules)
+    def __init__(self, *rules: T):
+        super().__init__(list(rules))
 
-    def __iter__(self) -> Iterator[Rule]:
+    def __iter__(self) -> Iterator[T]:
         return iter(self.rules)
 
 
-class RuleSet(RuleColl, ABC):
+class RuleSet(RuleColl[T], Generic[T], ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), tuple(sorted(self.rules))
 
-    def __init__(self, *rules: Rule):
+    def __init__(self, *rules: T):
         rules = frozenset(rules)
-        assert len(rules) > 1
-        self.rules: FrozenSet[Rule] = rules
+        super().__init__(frozenset(rules))
 
-    def __iter__(self) -> Iterator[Rule]:
+    def __iter__(self) -> Iterator[T]:
         return iter(sorted(self.rules))
 
 
 class Skipable(RuleUnit, ABC):
     is_skipable: bool = True
-    is_non_terminal: bool = True
-    is_terminal: bool = False
-    is_valid: bool = False
-    is_error: bool = False
 
     @classmethod
     def make(cls, rule: RuleCast) -> Union[Skipable, Empty]:
@@ -185,9 +173,57 @@ class Skipable(RuleUnit, ABC):
         return cls(rule)
 
 
-class BranchSet(RuleSet):
-    rules: FrozenSet[Branch]
+class Branch(RuleUnit[Rule]):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.name, self.rule, self.priority
 
+    def __init__(self, name: str, rule: Rule, priority: int = 0):
+        assert not isinstance(rule, Branch)
+        super().__init__(rule)
+        self.name: str = name
+        self.priority: int = priority
+
+    def new_rule(self, rule: Rule) -> Branch:
+        return Branch(self.name, rule, self.priority)
+
+    def __str__(self):
+        return f"{self.name!s}[{self.priority}] : {self.rule!s}"
+
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return self.rule.alphabet
+
+    @property
+    def is_skipable(self) -> bool:
+        return self.rule.is_skipable
+
+    @property
+    def is_non_terminal(self) -> bool:
+        return not self.is_terminal
+
+    @property
+    def is_terminal(self) -> bool:
+        return isinstance(self.rule, Empty)
+
+    @property
+    def is_valid(self) -> bool:
+        return self.rule == VALID
+
+    @property
+    def is_error(self) -> bool:
+        return self.rule == ERROR
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        for first, after in self.rule.splited:
+            yield first, self.new_rule(after)
+
+        if self.rule.is_skipable:
+            yield Match(group=Group.always(), action=EXCLUDE), self.new_rule(VALID)
+
+
+class BranchSet(RuleSet[Branch]):
     @classmethod
     def join(cls, args: Iterable[Branch]):
         return cls.make(*args)
@@ -250,56 +286,6 @@ class BranchSet(RuleSet):
         return all(rule.is_error for rule in self)
 
 
-class Branch(RuleUnit):
-    @property
-    def __args__(self) -> Tuple[Hashable, ...]:
-        return type(self), self.name, self.rule, self.priority
-
-    def __init__(self, name: str, rule: Rule, priority: int = 0):
-        assert not isinstance(rule, Branch)
-        super().__init__(rule)
-        self.name: str = name
-        self.priority: int = priority
-
-    def new_rule(self, rule: Rule) -> Branch:
-        return Branch(self.name, rule, self.priority)
-
-    def __str__(self):
-        return f"{self.name!s}[{self.priority}] : {self.rule!s}"
-
-    @property
-    def alphabet(self) -> FrozenSet[Item]:
-        return self.rule.alphabet
-
-    @property
-    def is_skipable(self) -> bool:
-        return self.rule.is_skipable
-
-    @property
-    def is_non_terminal(self) -> bool:
-        return self.rule.is_non_terminal
-
-    @property
-    def is_terminal(self) -> bool:
-        return self.rule.is_terminal
-
-    @property
-    def is_valid(self) -> bool:
-        return self.rule.is_valid
-
-    @property
-    def is_error(self) -> bool:
-        return self.rule.is_error
-
-    @property
-    def splited(self) -> Iterator[Tuple[Match, Rule]]:
-        for first, after in self.rule.splited:
-            yield first, self.new_rule(after)
-
-        if self.rule.is_skipable:
-            yield Match(group=Group.always(), action=EXCLUDE), self.new_rule(VALID)
-
-
 class Optional(Skipable):
     def __init__(self, rule: Rule):
         assert not isinstance(rule, (Skipable, Empty))
@@ -328,7 +314,7 @@ class Repeat(Skipable):
             yield first, after & self
 
 
-class All(RuleList):
+class All(RuleList[Rule]):
     @classmethod
     def join(cls, args: Iterable[RuleCast]) -> Rule:
         return cls.make(*args)
@@ -385,22 +371,6 @@ class All(RuleList):
         return all(rule.is_skipable for rule in self)
 
     @property
-    def is_non_terminal(self) -> bool:
-        return len(self) != 1 or self.rules[0].is_non_terminal
-
-    @property
-    def is_terminal(self) -> bool:
-        return len(self) == 1 and self.rules[0].is_terminal
-
-    @property
-    def is_valid(self) -> bool:
-        return len(self) == 1 and self.rules[0].is_valid
-
-    @property
-    def is_error(self) -> bool:
-        return len(self) == 1 and self.rules[0].is_error
-
-    @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
         for rule_first, rule_after in self.decompose:
             for first, after in rule_first.splited:
@@ -410,7 +380,7 @@ class All(RuleList):
         return " & ".join(map(str, self))
 
 
-class Any(RuleSet):
+class Any(RuleSet[Rule]):
     @classmethod
     def join(cls, args: Iterable[RuleCast]):
         return cls.make(*args)
@@ -460,22 +430,6 @@ class Any(RuleSet):
         return any(rule.is_skipable for rule in self)
 
     @property
-    def is_non_terminal(self) -> bool:
-        return any(rule.is_non_terminal for rule in self)
-
-    @property
-    def is_terminal(self) -> bool:
-        return all(rule.is_terminal for rule in self)
-
-    @property
-    def is_valid(self) -> bool:
-        return all(rule.is_valid for rule in self)
-
-    @property
-    def is_error(self) -> bool:
-        return all(rule.is_error for rule in self)
-
-    @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
         for rule in self:
             for first, after in rule.splited:
@@ -484,10 +438,6 @@ class Any(RuleSet):
 
 class Match(RuleLeaf):
     is_skipable: bool = False
-    is_non_terminal: bool = True
-    is_terminal: bool = False
-    is_valid: bool = False
-    is_error: bool = False
 
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
@@ -529,8 +479,6 @@ class Empty(RuleLeaf):
 
     alphabet: FrozenSet[Item] = frozenset()
     is_skipable: bool = False
-    is_non_terminal: bool = False
-    is_terminal: bool = True
 
     @property
     def is_valid(self) -> bool:

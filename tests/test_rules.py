@@ -10,27 +10,15 @@ class FakeRule(Rule):
         return type(self), \
                self.name, \
                self.alphabet, \
-               self.is_skipable, \
-               self.is_non_terminal, \
-               self.is_terminal, \
-               self.is_valid, \
-               self.is_error
+               self.is_skipable
 
     def __init__(self, name: str,
                  is_skipable: bool = False,
-                 is_non_terminal: bool = True,
-                 is_terminal: bool = False,
-                 is_valid: bool = False,
-                 is_error: bool = False,
                  alphabet: FrozenSet[Item] = frozenset(),
                  ):
         self.name: str = name
         self._alphabet: FrozenSet[Item] = alphabet
         self._is_skipable: bool = is_skipable
-        self._is_non_terminal: bool = is_non_terminal
-        self._is_terminal: bool = is_terminal
-        self._is_valid: bool = is_valid
-        self._is_error: bool = is_error
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name!r})"
@@ -45,22 +33,6 @@ class FakeRule(Rule):
     @property
     def is_skipable(self) -> bool:
         return self._is_skipable
-
-    @property
-    def is_non_terminal(self) -> bool:
-        return self._is_non_terminal
-
-    @property
-    def is_terminal(self) -> bool:
-        return self._is_terminal
-
-    @property
-    def is_valid(self) -> bool:
-        return self._is_valid
-
-    @property
-    def is_error(self) -> bool:
-        return self._is_error
 
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
