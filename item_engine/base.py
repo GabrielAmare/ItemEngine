@@ -4,7 +4,7 @@ from abc import ABC
 from dataclasses import dataclass
 from functools import reduce
 from operator import and_
-from typing import Tuple, Iterator, FrozenSet, List, Union, Hashable, Iterable
+from typing import Tuple, Iterator, FrozenSet, List, Union, Hashable, Iterable, Collection
 
 from .constants import ACTION, INCLUDE, EXCLUDE, T_STATE, INDEX, STATE, CASE, NT_STATE, INF, EOF
 from .items import Item, Group
@@ -114,7 +114,24 @@ class RuleUnit(Rule, ABC):
         return self.rule.alphabet
 
 
-class RuleList(Rule, ABC):
+class RuleColl(Rule, ABC):
+    rules: Collection[Rule]
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({', '.join(map(repr, self))})"
+
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return frozenset({item for branch in self.rules for item in branch.alphabet})
+
+    def __len__(self) -> int:
+        return len(self.rules)
+
+    def __iter__(self) -> Iterator[Rule]:
+        raise NotImplementedError
+
+
+class RuleList(RuleColl, ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), tuple(self.rules)
@@ -123,21 +140,11 @@ class RuleList(Rule, ABC):
         assert len(rules) > 1
         self.rules: List[Rule] = list(rules)
 
-    def __repr__(self):
-        return f"{self.__class__.__name__}({', '.join(map(repr, self.rules))})"
-
     def __iter__(self) -> Iterator[Rule]:
         return iter(self.rules)
 
-    def __len__(self) -> int:
-        return len(self.rules)
 
-    @property
-    def alphabet(self) -> FrozenSet[Item]:
-        return frozenset({item for rule in self.rules for item in rule.alphabet})
-
-
-class RuleSet(Rule, ABC):
+class RuleSet(RuleColl, ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), tuple(sorted(self.rules))
@@ -147,18 +154,8 @@ class RuleSet(Rule, ABC):
         assert len(rules) > 1
         self.rules: FrozenSet[Rule] = rules
 
-    def __repr__(self):
-        return f"{self.__class__.__name__}({', '.join(map(repr, self.rules))})"
-
     def __iter__(self) -> Iterator[Rule]:
         return iter(sorted(self.rules))
-
-    def __len__(self) -> int:
-        return len(self.rules)
-
-    @property
-    def alphabet(self) -> FrozenSet[Item]:
-        return frozenset({item for rule in self.rules for item in rule.alphabet})
 
 
 class Skipable(RuleUnit, ABC):
@@ -215,10 +212,6 @@ class BranchSet(RuleSet):
 
         return cls(*rules)
 
-    @property
-    def __args__(self) -> Tuple[Hashable, ...]:
-        return type(self), tuple(sorted(self.rules))
-
     def __init__(self, *rules: Branch):
         assert all(isinstance(rule, Branch) for rule in rules), list(map(type, rules))
         super().__init__(*rules)
@@ -234,27 +227,23 @@ class BranchSet(RuleSet):
 
     @property
     def is_skipable(self) -> bool:
-        return all(branch.is_skipable for branch in self.rules)
+        return all(rule.is_skipable for rule in self)
 
     @property
     def is_non_terminal(self) -> bool:
-        return any(branch.is_non_terminal for branch in self.rules)
+        return any(rule.is_non_terminal for rule in self)
 
     @property
     def is_terminal(self) -> bool:
-        return all(branch.is_terminal for branch in self.rules)
+        return all(rule.is_terminal for rule in self)
 
     @property
     def is_valid(self) -> bool:
-        return all(branch.is_valid for branch in self.rules)
+        return all(rule.is_valid for rule in self)
 
     @property
     def is_error(self) -> bool:
-        return all(branch.is_error for branch in self.rules)
-
-    @property
-    def alphabet(self) -> FrozenSet[Item]:
-        return frozenset({item for branch in self.rules for item in branch.alphabet})
+        return all(rule.is_error for rule in self)
 
 
 class Branch(RuleUnit):
