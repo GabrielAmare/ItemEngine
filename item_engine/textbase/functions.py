@@ -8,7 +8,7 @@ __all__ = ["charset", "string", "make_characters"]
 
 def charset(s: str) -> CharG:
     """convert a str into a Group"""
-    return CharG(frozenset(map(CharI, s)))
+    return CharG(map(CharI, s))
 
 
 def string(s: str) -> Rule:
