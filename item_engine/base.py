@@ -23,6 +23,28 @@ __all__ = [
 ########################################################################################################################
 
 class Rule(ArgsHashed, ABC):
+    @classmethod
+    def cast(cls, obj: RuleCast) -> Rule:
+        if obj is True:
+            return VALID
+
+        if obj is False:
+            return ERROR
+
+        if isinstance(obj, (frozenset, set)):
+            return Any.make(*obj)
+
+        if isinstance(obj, (tuple, list)):
+            return All.make(*obj)
+
+        if isinstance(obj, Rule):
+            return obj
+
+        if isinstance(obj, Group):
+            return Match(obj, INCLUDE)
+
+        raise TypeError(type(obj))
+
     def __and__(self, other: Rule) -> Rule:
         return All.make(self, other)
 
@@ -189,7 +211,9 @@ class Skipable(RuleUnit, ABC):
     is_error: bool = False
 
     @classmethod
-    def make(cls, rule: Rule) -> Union[Skipable, Empty]:
+    def make(cls, rule: RuleCast) -> Union[Skipable, Empty]:
+        rule: Rule = Rule.cast(rule)
+
         if isinstance(rule, Repeat):
             return rule
 
@@ -232,19 +256,21 @@ class Repeat(Skipable):
 
 class All(RuleList):
     @classmethod
-    def join(cls, args: Iterable[Rule]) -> Rule:
+    def join(cls, args: Iterable[RuleCast]) -> Rule:
         return cls.make(*args)
 
     @classmethod
-    def _flat(cls, *args: Rule) -> Iterable[Rule]:
+    def _flat(cls, *args: RuleCast) -> Iterable[Rule]:
         for arg in args:
+            arg: Rule = Rule.cast(arg)
+
             if isinstance(arg, cls):
                 yield from cls._flat(*arg.rules)
             else:
                 yield arg
 
     @classmethod
-    def make(cls, *args: Rule) -> Rule:
+    def make(cls, *args: RuleCast) -> Rule:
         rules: List[Rule] = []
 
         for arg in cls._flat(*args):
@@ -313,19 +339,21 @@ class All(RuleList):
 
 class Any(RuleList):
     @classmethod
-    def join(cls, args: Iterable[Rule]):
+    def join(cls, args: Iterable[RuleCast]):
         return cls.make(*args)
 
     @classmethod
-    def _flat(cls, *args: Rule) -> Iterable[Rule]:
+    def _flat(cls, *args: RuleCast) -> Iterable[Rule]:
         for arg in args:
+            arg: Rule = Rule.cast(arg)
+
             if isinstance(arg, cls):
                 yield from cls._flat(*arg.rules)
             else:
                 yield arg
 
     @classmethod
-    def make(cls, *args: Rule):
+    def make(cls, *args: RuleCast):
         rules: List[Rule] = []
 
         for arg in cls._flat(*args):
@@ -819,3 +847,6 @@ class OPTIONS:
     @staticmethod
     def non_overlaping(elements: List[Element]):
         return all(not a.ol(b) for a in elements for b in elements if a is not b)
+
+
+RuleCast = Union[bool, frozenset, set, tuple, list, Group, Rule]
