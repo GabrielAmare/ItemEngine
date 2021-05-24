@@ -70,21 +70,19 @@ class FakeRule(Rule):
 
 
 class FakeItem(Item):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.name
+
     def __init__(self, name: str):
         self.name: str = name
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.name!r})"
 
     @property
     def as_group(self) -> Group:
         return Group({self})
-
-    def __hash__(self):
-        pass
-
-    def __eq__(self, other):
-        pass
-
-    def __lt__(self, other):
-        pass
 
 
 class TestRules(unittest.TestCase):
