@@ -168,12 +168,12 @@ def MakeLexer(
     keyword_branches, keyword_register = gen_keywords(*keywords)
     symbols_branches, symbols_register = gen_symbols(*symbols)
 
-    lexer = BranchSet({
+    lexer = BranchSet.make(
         *keyword_branches,
         *symbols_branches,
         *gen_branches(**branches),
         *raw_branches
-    })
+    )
 
     return lexer, keyword_register, symbols_register
 
@@ -189,9 +189,9 @@ def MakeParser(
 
     operators_b, op_register = gen_operators(**operators)
 
-    parser = BranchSet({
+    parser = BranchSet.make(
         *operators_b,
         *gen_branches(**branches)
-    })
+    )
 
     return parser, op_register

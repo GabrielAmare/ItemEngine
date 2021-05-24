@@ -656,34 +656,72 @@ class Branch(RuleUnit):
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
         for first, after in self.rule.splited:
-            yield first, after
+            yield first, self.new_rule(after)
 
         if self.rule.is_skipable:
-            yield Match(group=Group.always(), action=EXCLUDE), VALID
+            yield Match(group=Group.always(), action=EXCLUDE), self.new_rule(VALID)
 
 
-class BranchSet(ArgsHashed):
+class BranchSet(RuleSet):
+    rules: FrozenSet[Branch]
+
+    @classmethod
+    def join(cls, args: Iterable[Branch]):
+        return cls.make(*args)
+
+    @classmethod
+    def _flat(cls, *args: Branch) -> Iterable[Branch]:
+        for arg in args:
+            if isinstance(arg, cls):
+                yield from cls._flat(*arg.rules)
+            else:
+                yield arg
+
+    @classmethod
+    def make(cls, *args: Branch) -> Union[Branch, BranchSet]:
+        rules: List[Branch] = []
+
+        for arg in cls._flat(*args):
+            if arg not in rules:
+                rules.append(arg)
+
+        if len(rules) == 0:
+            raise Exception("You need at least 1 branch into a branchset")
+
+        if len(rules) == 1:
+            return rules[0]
+
+        return cls(*rules)
+
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
-        return type(self), tuple(sorted(self.branches))
+        return type(self), tuple(sorted(self.rules))
 
-    def __init__(self, branches: Iterable[Branch] = None):
-        if branches is None:
-            branches = frozenset()
-        self.branches: FrozenSet[Branch] = frozenset(branches)
+    def __init__(self, *rules: Branch):
+        assert all(isinstance(rule, Branch) for rule in rules), list(map(type, rules))
+        super().__init__(*rules)
 
     def __bool__(self):
-        return bool(self.branches)
+        return bool(self.rules)
+
+    def __str__(self):
+        pass
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Branch]]:
+        for branch in self.rules:
+            for match, after in branch.splited:
+                yield match, after
 
     def terminal_code(self, throw_errors: bool = False) -> Iterator[T_STATE]:
-        valid_branches = [branch for branch in self.branches if branch.is_valid]
+        valid_branches = [branch for branch in self.rules if branch.is_valid]
         valid_max_priority = max([branch.priority for branch in valid_branches], default=0)
         valid_names = [T_STATE(branch.name) for branch in valid_branches if branch.priority == valid_max_priority]
 
         if valid_names:
             return valid_names
 
-        error_branches = [branch for branch in self.branches if branch.is_error]
+        error_branches = [branch for branch in self.rules if branch.is_error]
         error_max_priority = max([branch.priority for branch in error_branches], default=0)
         error_names = [branch.name for branch in error_branches if branch.priority == error_max_priority]
 
@@ -697,24 +735,23 @@ class BranchSet(ArgsHashed):
                     return [T_STATE("!")]
 
     def get_all_cases(self) -> Iterator[Tuple[Group, ACTION, Branch]]:
-        for branch in self.branches:
-            for first, after in branch.splited:
-                yield first.group, first.action, branch.new_rule(after)
+        for match, branch in self.splited:
+            yield match.group, match.action, branch
 
     @property
     def only_non_terminals(self) -> BranchSet:
         """Remove the terminal branches"""
-        return BranchSet(frozenset(branch for branch in self.branches if not branch.is_terminal))
+        return BranchSet.join(branch for branch in self.rules if not branch.is_terminal)
 
     @property
     def only_valids(self) -> BranchSet:
         """Remove the terminal branches"""
-        return BranchSet(frozenset(branch for branch in self.branches if branch.is_valid))
+        return BranchSet.join(branch for branch in self.rules if branch.is_valid)
 
     @property
     def only_errors(self) -> BranchSet:
         """Remove the terminal branches"""
-        return BranchSet(frozenset(branch for branch in self.branches if branch.is_error))
+        return BranchSet.join(branch for branch in self.rules if branch.is_error)
 
     def truncated(self, formal: bool):
         if formal:
@@ -726,24 +763,28 @@ class BranchSet(ArgsHashed):
             return self
 
     @property
+    def is_skipable(self) -> bool:
+        return all(branch.is_skipable for branch in self.rules)
+
+    @property
     def is_non_terminal(self) -> bool:
-        return any(branch.is_non_terminal for branch in self.branches)
+        return any(branch.is_non_terminal for branch in self.rules)
 
     @property
     def is_terminal(self) -> bool:
-        return all(branch.is_terminal for branch in self.branches)
+        return all(branch.is_terminal for branch in self.rules)
 
     @property
     def is_valid(self) -> bool:
-        return all(branch.is_valid for branch in self.branches)
+        return all(branch.is_valid for branch in self.rules)
 
     @property
     def is_error(self) -> bool:
-        return all(branch.is_error for branch in self.branches)
+        return all(branch.is_error for branch in self.rules)
 
     @property
     def alphabet(self) -> FrozenSet[Item]:
-        return frozenset({item for branch in self.branches for item in branch.alphabet})
+        return frozenset({item for branch in self.rules for item in branch.alphabet})
 
 
 __all__ += ["Element", "OPTIONS"]

@@ -62,10 +62,9 @@ class GroupToOutcome(Dict[Group, Outcome]):
     def from_branch_set(cls, branch_set: BranchSet) -> GroupToOutcome:
         self: GroupToOutcome = cls()
         data = []
-        for branch in branch_set.branches:
-            for first, after in branch.splited:
-                data.append([str(branch), str(first.group), str(first.action), str(after)])
-                self.add(first.group, first.action, branch.new_rule(after))
+        for match, branch in branch_set.splited:
+            data.append([str(branch), str(match.group), str(match.action), str(branch)])
+            self.add(match.group, match.action, branch)
 
         if DEBUG_GROUP_TO_OUTCOME:
             from tools37 import ReprTable
@@ -118,7 +117,7 @@ class ERROR_MODE(Enum):
 
 @dataclass
 class TargetSelect:
-    non_terminal_part: BranchSet = field(default_factory=BranchSet)
+    nonte_branches: List[Branch] = field(default_factory=list)
     valid_branches: List[Branch] = field(default_factory=list)
     error_branches: List[Branch] = field(default_factory=list)
     valid_priority: int = 0
@@ -126,11 +125,11 @@ class TargetSelect:
 
     @property
     def target(self) -> BranchSet:
-        return BranchSet({*self.non_terminal_part.branches, *self.valid_branches, *self.error_branches})
+        return BranchSet.make(*self.nonte_branches, *self.valid_branches, *self.error_branches)
 
     @property
     def priority(self):
-        if self.non_terminal_part:
+        if self.nonte_branches:
             return 2, 1
         elif self.valid_branches:
             return 1, self.valid_priority
@@ -139,7 +138,7 @@ class TargetSelect:
 
     def add_branch(self, branch: Branch) -> None:
         if not branch.is_terminal:
-            self.non_terminal_part = BranchSet({*self.non_terminal_part.branches, branch})
+            self.nonte_branches.append(branch)
         elif branch.is_valid:
             self.valid_priority = max(self.valid_priority, branch.priority)
             self.valid_branches.append(branch)
@@ -150,7 +149,7 @@ class TargetSelect:
             raise Exception(f"Unknown case for branch neither non-terminal, valid or error !")
 
     def get_target_states(self, func: FUNC) -> Iterator[STATE]:
-        if self.non_terminal_part:
+        if self.nonte_branches:
             return [func(self.target)]
         elif self.valid_branches:
             return [T_STATE(branch.name) for branch in self.valid_branches]
@@ -183,7 +182,7 @@ class TargetSelect:
         return T_STATE("!" + "|".join(sorted(branch.name for branch in error_branches)))
 
     def data(self, func: FUNC, error_mode: ERROR_MODE = ERROR_MODE.MOST) -> STATE:
-        if self.non_terminal_part:
+        if self.nonte_branches:
             return func(self.target)
         elif self.valid_branches:
             return self._data_valid()
@@ -205,7 +204,7 @@ class ActionSelect(Dict[ACTION, TargetSelect]):
     def targets(self) -> Iterator[BranchSet]:
         """Return all the non-terminal branch-sets"""
         for target_select in self.values():
-            if target_select.non_terminal_part:
+            if target_select.nonte_branches:
                 yield target_select.target
 
     def data(self, func: FUNC, formal: bool = False) -> ActionSelectData:
