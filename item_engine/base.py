@@ -99,6 +99,10 @@ class Rule(ArgsHashed, ABC):
 
 
 class RuleUnit(Rule, ABC):
+class RuleLeaf(Rule, ABC):
+    """A RuleLeaf contains 0 sub-rule"""
+
+
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), self.rule
@@ -478,7 +482,7 @@ class Any(RuleSet):
                 yield first, after
 
 
-class Match(Rule):
+class Match(RuleLeaf):
     is_skipable: bool = False
     is_non_terminal: bool = True
     is_terminal: bool = False
@@ -509,7 +513,7 @@ class Match(Rule):
         yield Match(~self.group, EXCLUDE), ERROR
 
 
-class Empty(Rule):
+class Empty(RuleLeaf):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), self.valid
