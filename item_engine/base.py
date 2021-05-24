@@ -311,23 +311,23 @@ class All(RuleList):
 
     @property
     def is_skipable(self) -> bool:
-        return all(rule.is_skipable for rule in self.rules)
+        return all(rule.is_skipable for rule in self)
 
     @property
     def is_non_terminal(self) -> bool:
-        return len(self.rules) != 1 or self.rules[0].is_non_terminal
+        return len(self) != 1 or self.rules[0].is_non_terminal
 
     @property
     def is_terminal(self) -> bool:
-        return len(self.rules) == 1 and self.rules[0].is_terminal
+        return len(self) == 1 and self.rules[0].is_terminal
 
     @property
     def is_valid(self) -> bool:
-        return len(self.rules) == 1 and self.rules[0].is_valid
+        return len(self) == 1 and self.rules[0].is_valid
 
     @property
     def is_error(self) -> bool:
-        return len(self.rules) == 1 and self.rules[0].is_error
+        return len(self) == 1 and self.rules[0].is_error
 
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
@@ -336,7 +336,7 @@ class All(RuleList):
                 yield first, after & rule_after
 
     def __str__(self):
-        return " & ".join(map(str, self.rules))
+        return " & ".join(map(str, self))
 
 
 class Any(RuleSet):
@@ -382,31 +382,31 @@ class Any(RuleSet):
         super().__init__(*rules)
 
     def __str__(self):
-        return " | ".join(map(str, self.rules))
+        return " | ".join(map(str, self))
 
     @property
     def is_skipable(self) -> bool:
-        return any(rule.is_skipable for rule in self.rules)
+        return any(rule.is_skipable for rule in self)
 
     @property
     def is_non_terminal(self) -> bool:
-        return any(rule.is_non_terminal for rule in self.rules)
+        return any(rule.is_non_terminal for rule in self)
 
     @property
     def is_terminal(self) -> bool:
-        return all(rule.is_terminal for rule in self.rules)
+        return all(rule.is_terminal for rule in self)
 
     @property
     def is_valid(self) -> bool:
-        return all(rule.is_valid for rule in self.rules)
+        return all(rule.is_valid for rule in self)
 
     @property
     def is_error(self) -> bool:
-        return all(rule.is_error for rule in self.rules)
+        return all(rule.is_error for rule in self)
 
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
-        for rule in self.rules:
+        for rule in self:
             for first, after in rule.splited:
                 yield first, after
 
