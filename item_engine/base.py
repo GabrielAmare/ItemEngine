@@ -8,7 +8,7 @@ from typing import Tuple, Iterator, FrozenSet, List, TypeVar, Type, Union, Hasha
 
 import python_generator as pg
 
-from .constants import ACTION, INCLUDE, EXCLUDE, AS, IN, T_STATE, INDEX, STATE, CASE, NT_STATE, INF, EOF
+from .constants import ACTION, INCLUDE, EXCLUDE, T_STATE, INDEX, STATE, CASE, NT_STATE, INF, EOF
 from .utils import ArgsHashed
 
 __all__ = [
@@ -453,34 +453,7 @@ class Match(Rule):
 __all__ += ["Item", "Group"]
 
 
-class ItemInterface(ArgsHashed, ABC):
-    def match(self, action: ACTION) -> Match:
-        if isinstance(self, Item):
-            return Match(self.as_group, action)
-        elif isinstance(self, Group):
-            return Match(self, action)
-        else:
-            raise ValueError(self)
-
-    def include(self) -> Match:
-        return self.match(INCLUDE)
-
-    def exclude(self) -> Match:
-        return self.match(EXCLUDE)
-
-    def include_as(self, key: str) -> Match:
-        return self.match(AS.format(key))
-
-    def include_in(self, key: str) -> Match:
-        return self.match(IN.format(key))
-
-    inc = include
-    exc = exclude
-    as_ = include_as
-    in_ = include_in
-
-
-class Item(ItemInterface, ABC):
+class Item(ArgsHashed, ABC):
     @property
     def as_group(self) -> Group:
         raise NotImplementedError
@@ -500,7 +473,7 @@ E = TypeVar("E", bound=Item)
 T = TypeVar("T")
 
 
-class Group(ItemInterface, ArgsHashed, ABC):
+class Group(ArgsHashed):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), self.inverted, tuple(sorted(self.items))

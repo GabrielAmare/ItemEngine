@@ -1,16 +1,19 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import TypeVar, Tuple, Hashable, FrozenSet
 
-from item_engine import Item, Group, Match, Element, T_STATE, CASE, INDEX, EOF
 from python_generator import VAR, CONDITION
+
+from item_engine import Match, Element, T_STATE, CASE, INDEX, EOF
+from .base import BaseItem, BaseGroup
 
 E = TypeVar("E", bound=Element)
 
 __all__ = ["Char", "CharI", "CharG"]
 
 
-class CharG(Group):
+class CharG(BaseGroup):
     items: FrozenSet[CharI]
 
     @property
@@ -27,7 +30,7 @@ class CharG(Group):
         return Match(self, action)
 
 
-class CharI(Item):
+class CharI(BaseItem):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
         return type(self), self.char
