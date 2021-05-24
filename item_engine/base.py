@@ -161,6 +161,7 @@ class RuleList(Rule, ABC):
         return type(self), tuple(self.rules)
 
     def __init__(self, *rules: Rule):
+        assert len(rules) > 1
         self.rules: List[Rule] = list(rules)
 
     def __repr__(self):
@@ -183,7 +184,9 @@ class RuleSet(Rule, ABC):
         return type(self), tuple(sorted(self.rules))
 
     def __init__(self, *rules: Rule):
-        self.rules: FrozenSet[Rule] = frozenset(rules)
+        rules = frozenset(rules)
+        assert len(rules) > 1
+        self.rules: FrozenSet[Rule] = rules
 
     def __repr__(self):
         return f"{self.__class__.__name__}({', '.join(map(repr, self.rules))})"
@@ -291,7 +294,6 @@ class All(RuleList):
         return cls(*rules)
 
     def __init__(self, *rules: Rule):
-        assert len(rules) > 1
         assert not any(isinstance(rule, All) for rule in rules)
         assert not any(isinstance(rule, Empty) for rule in rules)
         super().__init__(*rules)
@@ -375,7 +377,6 @@ class Any(RuleSet):
         return cls(*rules)
 
     def __init__(self, *rules: Rule):
-        assert len(rules) > 1
         assert not any(isinstance(rule, Any) for rule in rules)
         assert not any(isinstance(rule, Empty) for rule in rules)
         super().__init__(*rules)
