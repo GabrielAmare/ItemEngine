@@ -157,6 +157,39 @@ class TestRules(unittest.TestCase):
         self.assertTrue(Group.never().is_never)
         self.assertFalse(Group.never().is_always)
 
+    def test_006(self):
+        """Testing Rule.cast"""
+        A, B = FakeRule("A"), FakeRule("B")
+        x, y = FakeItem('X'), FakeItem('Y')
+        X, Y = Group({x}), Group({y})
+
+        # Test basic
+        self.assertEqual(first=Any(A, B), second=Rule.cast(frozenset({A, B})))
+        self.assertEqual(first=Any(A, B), second=Rule.cast({A, B}))
+        self.assertEqual(first=All(A, B), second=Rule.cast((A, B)))
+        self.assertEqual(first=All(A, B), second=Rule.cast([A, B]))
+        self.assertEqual(first=Match(X, INCLUDE), second=Rule.cast(X))
+        self.assertEqual(first=Match(X, INCLUDE), second=Rule.cast(x))
+
+        # Test that Rule.cast works accordingly with All.make & Any.make
+        self.assertEqual(first=Match(X, INCLUDE), second=Rule.cast(frozenset({X})))
+        self.assertEqual(first=Match(X, INCLUDE), second=Rule.cast({X}))
+        self.assertEqual(first=Match(X, INCLUDE), second=Rule.cast((X,)))
+        self.assertEqual(first=Match(X, INCLUDE), second=Rule.cast([X]))
+
+        # Test nested
+        self.assertEqual(first=All(Match(X, INCLUDE), Match(Y, INCLUDE)), second=Rule.cast([X, Y]))
+        self.assertEqual(first=Any(Match(X, INCLUDE), Match(Y, INCLUDE)), second=Rule.cast({X, Y}))
+
+        # Test bigger nested
+        self.assertEqual(
+            first=Any(
+                All(Match(X, INCLUDE), Match(Y, INCLUDE)),
+                All(Match(Y, INCLUDE), Match(X, INCLUDE))
+            ),
+            second=Rule.cast({(Y, X), (X, Y)})
+        )
+
 
 if __name__ == '__main__':
     unittest.main()
