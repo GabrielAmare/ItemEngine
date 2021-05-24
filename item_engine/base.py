@@ -13,13 +13,10 @@ from .utils import ArgsHashed
 __all__ = [
     "Rule", "RuleUnit", "RuleList", "Empty",  # abstracts
     "Optional", "Repeat", "All", "Any",  # composed
-    "Match", "VALID", "ERROR"  # simple
+    "Match", "VALID", "ERROR",  # simple
+    "Branch", "BranchSet"  # top-level
 ]
 
-
-########################################################################################################################
-# Rule
-########################################################################################################################
 
 class Rule(ArgsHashed, ABC):
     @classmethod
@@ -101,46 +98,6 @@ class Rule(ArgsHashed, ABC):
         return Optional.make(self)
 
 
-########################################################################################################################
-# Empty | RuleUnit | RuleList
-########################################################################################################################
-
-class Empty(Rule):
-    @property
-    def __args__(self) -> Tuple[Hashable, ...]:
-        return type(self), self.valid
-
-    def __init__(self, valid: bool):
-        self.valid: bool = valid
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.valid!r})"
-
-    def __str__(self):
-        return "VALID" if self.valid else "ERROR"
-
-    alphabet: FrozenSet[Item] = frozenset()
-    is_skipable: bool = False
-    is_non_terminal: bool = False
-    is_terminal: bool = True
-
-    @property
-    def is_valid(self) -> bool:
-        return self.valid
-
-    @property
-    def is_error(self) -> bool:
-        return not self.valid
-
-    @property
-    def splited(self) -> Iterator[Tuple[Match, Rule]]:
-        yield Match(group=Group(inverted=self.valid), action=EXCLUDE), self
-
-
-VALID = Empty(True)
-ERROR = Empty(False)
-
-
 class RuleUnit(Rule, ABC):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
@@ -204,10 +161,6 @@ class RuleSet(Rule, ABC):
         return frozenset({item for rule in self.rules for item in rule.alphabet})
 
 
-########################################################################################################################
-# Optional | Repeat | All | Any
-########################################################################################################################
-
 class Skipable(RuleUnit, ABC):
     is_skipable: bool = True
     is_non_terminal: bool = True
@@ -229,6 +182,129 @@ class Skipable(RuleUnit, ABC):
             rule = rule.rule
 
         return cls(rule)
+
+
+class BranchSet(RuleSet):
+    rules: FrozenSet[Branch]
+
+    @classmethod
+    def join(cls, args: Iterable[Branch]):
+        return cls.make(*args)
+
+    @classmethod
+    def _flat(cls, *args: Branch) -> Iterable[Branch]:
+        for arg in args:
+            if isinstance(arg, cls):
+                yield from cls._flat(*arg.rules)
+            else:
+                yield arg
+
+    @classmethod
+    def make(cls, *args: Branch) -> Union[Branch, BranchSet]:
+        rules: List[Branch] = []
+
+        for arg in cls._flat(*args):
+            if arg not in rules:
+                rules.append(arg)
+
+        if len(rules) == 0:
+            raise Exception("You need at least 1 branch into a branchset")
+
+        if len(rules) == 1:
+            return rules[0]
+
+        return cls(*rules)
+
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), tuple(sorted(self.rules))
+
+    def __init__(self, *rules: Branch):
+        assert all(isinstance(rule, Branch) for rule in rules), list(map(type, rules))
+        super().__init__(*rules)
+
+    def __str__(self):
+        pass
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Branch]]:
+        for branch in self.rules:
+            for match, after in branch.splited:
+                yield match, after
+
+    @property
+    def is_skipable(self) -> bool:
+        return all(branch.is_skipable for branch in self.rules)
+
+    @property
+    def is_non_terminal(self) -> bool:
+        return any(branch.is_non_terminal for branch in self.rules)
+
+    @property
+    def is_terminal(self) -> bool:
+        return all(branch.is_terminal for branch in self.rules)
+
+    @property
+    def is_valid(self) -> bool:
+        return all(branch.is_valid for branch in self.rules)
+
+    @property
+    def is_error(self) -> bool:
+        return all(branch.is_error for branch in self.rules)
+
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return frozenset({item for branch in self.rules for item in branch.alphabet})
+
+
+class Branch(RuleUnit):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.name, self.rule, self.priority
+
+    def __init__(self, name: str, rule: Rule, priority: int = 0):
+        assert not isinstance(rule, Branch)
+        super().__init__(rule)
+        self.name: str = name
+        self.priority: int = priority
+
+    def new_rule(self, rule: Rule) -> Branch:
+        return Branch(self.name, rule, self.priority)
+
+    def __str__(self):
+        return f"{self.name!s}[{self.priority}] : {self.rule!s}"
+
+    @property
+    def alphabet(self) -> FrozenSet[Item]:
+        return self.rule.alphabet
+
+    @property
+    def is_skipable(self) -> bool:
+        return self.rule.is_skipable
+
+    @property
+    def is_non_terminal(self) -> bool:
+        return self.rule.is_non_terminal
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.rule.is_terminal
+
+    @property
+    def is_valid(self) -> bool:
+        return self.rule.is_valid
+
+    @property
+    def is_error(self) -> bool:
+        return self.rule.is_error
+
+    @property
+    def splited(self) -> Iterator[Tuple[Match, Rule]]:
+        for first, after in self.rule.splited:
+            yield first, self.new_rule(after)
+
+        if self.rule.is_skipable:
+            yield Match(group=Group.always(), action=EXCLUDE), self.new_rule(VALID)
 
 
 class Optional(Skipable):
@@ -413,11 +489,6 @@ class Any(RuleSet):
                 yield first, after
 
 
-########################################################################################################################
-# Match
-########################################################################################################################
-
-
 class Match(Rule):
     is_skipable: bool = False
     is_non_terminal: bool = True
@@ -449,142 +520,45 @@ class Match(Rule):
         yield Match(~self.group, EXCLUDE), ERROR
 
 
-__all__ += ["Branch", "BranchSet"]
-
-
-########################################################################################################################
-# Branch & BranchSet
-########################################################################################################################
-
-class Branch(RuleUnit):
+class Empty(Rule):
     @property
     def __args__(self) -> Tuple[Hashable, ...]:
-        return type(self), self.name, self.rule, self.priority
+        return type(self), self.valid
 
-    def __init__(self, name: str, rule: Rule, priority: int = 0):
-        assert not isinstance(rule, Branch)
-        super().__init__(rule)
-        self.name: str = name
-        self.priority: int = priority
+    def __init__(self, valid: bool):
+        self.valid: bool = valid
 
-    def new_rule(self, rule: Rule) -> Branch:
-        return Branch(self.name, rule, self.priority)
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.valid!r})"
 
     def __str__(self):
-        return f"{self.name!s}[{self.priority}] : {self.rule!s}"
+        return "VALID" if self.valid else "ERROR"
 
-    @property
-    def alphabet(self) -> FrozenSet[Item]:
-        return self.rule.alphabet
-
-    @property
-    def is_skipable(self) -> bool:
-        return self.rule.is_skipable
-
-    @property
-    def is_non_terminal(self) -> bool:
-        return self.rule.is_non_terminal
-
-    @property
-    def is_terminal(self) -> bool:
-        return self.rule.is_terminal
+    alphabet: FrozenSet[Item] = frozenset()
+    is_skipable: bool = False
+    is_non_terminal: bool = False
+    is_terminal: bool = True
 
     @property
     def is_valid(self) -> bool:
-        return self.rule.is_valid
+        return self.valid
 
     @property
     def is_error(self) -> bool:
-        return self.rule.is_error
+        return not self.valid
 
     @property
     def splited(self) -> Iterator[Tuple[Match, Rule]]:
-        for first, after in self.rule.splited:
-            yield first, self.new_rule(after)
-
-        if self.rule.is_skipable:
-            yield Match(group=Group.always(), action=EXCLUDE), self.new_rule(VALID)
+        yield Match(group=Group(inverted=self.valid), action=EXCLUDE), self
 
 
-class BranchSet(RuleSet):
-    rules: FrozenSet[Branch]
+RuleCast = Union[Rule, Item, Group, bool, frozenset, set, tuple, list]
 
-    @classmethod
-    def join(cls, args: Iterable[Branch]):
-        return cls.make(*args)
-
-    @classmethod
-    def _flat(cls, *args: Branch) -> Iterable[Branch]:
-        for arg in args:
-            if isinstance(arg, cls):
-                yield from cls._flat(*arg.rules)
-            else:
-                yield arg
-
-    @classmethod
-    def make(cls, *args: Branch) -> Union[Branch, BranchSet]:
-        rules: List[Branch] = []
-
-        for arg in cls._flat(*args):
-            if arg not in rules:
-                rules.append(arg)
-
-        if len(rules) == 0:
-            raise Exception("You need at least 1 branch into a branchset")
-
-        if len(rules) == 1:
-            return rules[0]
-
-        return cls(*rules)
-
-    @property
-    def __args__(self) -> Tuple[Hashable, ...]:
-        return type(self), tuple(sorted(self.rules))
-
-    def __init__(self, *rules: Branch):
-        assert all(isinstance(rule, Branch) for rule in rules), list(map(type, rules))
-        super().__init__(*rules)
-
-    def __str__(self):
-        pass
-
-    @property
-    def splited(self) -> Iterator[Tuple[Match, Branch]]:
-        for branch in self.rules:
-            for match, after in branch.splited:
-                yield match, after
-
-    @property
-    def is_skipable(self) -> bool:
-        return all(branch.is_skipable for branch in self.rules)
-
-    @property
-    def is_non_terminal(self) -> bool:
-        return any(branch.is_non_terminal for branch in self.rules)
-
-    @property
-    def is_terminal(self) -> bool:
-        return all(branch.is_terminal for branch in self.rules)
-
-    @property
-    def is_valid(self) -> bool:
-        return all(branch.is_valid for branch in self.rules)
-
-    @property
-    def is_error(self) -> bool:
-        return all(branch.is_error for branch in self.rules)
-
-    @property
-    def alphabet(self) -> FrozenSet[Item]:
-        return frozenset({item for branch in self.rules for item in branch.alphabet})
-
+VALID = Empty(True)
+ERROR = Empty(False)
 
 __all__ += ["Element", "OPTIONS"]
 
-
-########################################################################################################################
-# Element
-########################################################################################################################
 
 @dataclass(frozen=True, order=True)
 class HasSpan:
@@ -684,6 +658,3 @@ class OPTIONS:
     @staticmethod
     def non_overlaping(elements: List[Element]):
         return all(not a.ol(b) for a in elements for b in elements if a is not b)
-
-
-RuleCast = Union[Rule, Item, Group, bool, frozenset, set, tuple, list]
