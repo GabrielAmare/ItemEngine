@@ -329,7 +329,7 @@ class Parser:
         return NT_STATE(self.branch_sets.index(branch_set))
 
     def data(self) -> ParserData:
-        self.branch_sets = sorted(self.branch_sets)  # insure stable indexes
+        self.branch_sets = [self.branch_sets[0], *sorted(self.branch_sets[1:])]  # insure stable indexes
 
         return ParserData(
             name=self.name,
