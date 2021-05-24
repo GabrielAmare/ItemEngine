@@ -25,6 +25,15 @@ __all__ = [
 class Rule(ArgsHashed, ABC):
     @classmethod
     def cast(cls, obj: RuleCast) -> Rule:
+        if isinstance(obj, Rule):
+            return obj
+
+        if isinstance(obj, Item):
+            return Match(obj.as_group, INCLUDE)
+
+        if isinstance(obj, Group):
+            return Match(obj, INCLUDE)
+
         if obj is True:
             return VALID
 
@@ -36,12 +45,6 @@ class Rule(ArgsHashed, ABC):
 
         if isinstance(obj, (tuple, list)):
             return All.make(*obj)
-
-        if isinstance(obj, Rule):
-            return obj
-
-        if isinstance(obj, Group):
-            return Match(obj, INCLUDE)
 
         raise TypeError(type(obj))
 
@@ -850,4 +853,4 @@ class OPTIONS:
         return all(not a.ol(b) for a in elements for b in elements if a is not b)
 
 
-RuleCast = Union[bool, frozenset, set, tuple, list, Group, Rule]
+RuleCast = Union[Rule, Item, Group, bool, frozenset, set, tuple, list]
