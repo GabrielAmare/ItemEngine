@@ -1,5 +1,4 @@
-from dataclasses import replace
-from item_engine import ACTION, STATE
+from item_engine import ACTION, IE_SyntaxError, STATE
 from item_engine.textbase.items.chars import Char
 from item_engine.textbase.items.tokens import Token
 from typing import Iterator, Tuple
@@ -11,7 +10,7 @@ __all__ = ['lexer']
 def _lexer(current: Token, item: Char) -> Tuple[ACTION, STATE]:
     if current.value == 0:
         if item.value in '\t ':
-            return '∈', 5
+            return '∈', 4
         elif item.value == '*':
             return '∈', 'STAR'
         elif item.value == '+':
@@ -23,40 +22,40 @@ def _lexer(current: Token, item: Char) -> Tuple[ACTION, STATE]:
         elif item.value == '/':
             return '∈', 'SLASH'
         elif item.value in '0123456789':
-            return '∈', 2
+            return '∈', 5
         elif item.value == '=':
             return '∈', 'EQUAL'
         elif item.value in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz':
-            return '∈', 4
+            return '∈', 3
         else:
             return '∉', '!DASH|EQUAL|PLUS|SLASH|STAR'
     elif current.value == 1:
         if item.value in '0123456789':
-            return '∈', 3
+            return '∈', 2
         else:
             return '∉', '!FLOAT'
     elif current.value == 2:
-        if item.value == '.':
-            return '∈', 3
-        elif item.value in '0123456789':
+        if item.value in '0123456789':
             return '∈', 2
         else:
-            return '∉', 'INT'
+            return '∉', 'FLOAT'
     elif current.value == 3:
-        if item.value in '0123456789':
+        if item.value in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz':
             return '∈', 3
         else:
-            return '∉', 'FLOAT'
+            return '∉', 'VAR'
     elif current.value == 4:
-        if item.value in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz':
+        if item.value in '\t ':
             return '∈', 4
         else:
-            return '∉', 'VAR'
+            return '∉', 'WHITESPACE'
     elif current.value == 5:
-        if item.value in '\t ':
+        if item.value == '.':
+            return '∈', 2
+        elif item.value in '0123456789':
             return '∈', 5
         else:
-            return '∉', 'WHITESPACE'
+            return '∉', 'INT'
     else:
         raise Exception(f'value = {current.value!r}')
 
@@ -75,11 +74,11 @@ def lexer(src: Iterator[Char]) -> Iterator[Token]:
                 if new.value in ['WHITESPACE']:
                     continue
                 else:
-                    new = replace(new, at=pos, to=pos + 1)
+                    new = new.replace(at=pos, to=pos + 1)
                     pos += 1
                 yield new
                 continue
             if old.value == 'EOF':
                 yield Token.EOF(pos)
                 break
-            raise SyntaxError((cur, old, new))
+            raise IE_SyntaxError(cur, old, new)

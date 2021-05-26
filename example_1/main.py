@@ -1,8 +1,8 @@
-from example_1.test_pckg.make import engine
+from example_1.spec import engine
 
 engine.build(allow_overwrite=True)
 
-from example_1.test_pckg.engine import parse
+from example_1.engine import parse
 from item_engine.textbase import make_characters, rt_tokens
 
 

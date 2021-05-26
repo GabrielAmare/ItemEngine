@@ -1,0 +1,9 @@
+{X !x}
+{X *x}
+{X !x} {Y !y}
+{X !x} | {Y !y}
+'literal'
+'sep'.{I *i}
+{X !x} {Y !y} | {Z !z} {T !t}
+Add = {Expr !left} ' + ' {Term !right}
+Mul = {Expr !left} ' * ' {Term !right} | {Expr !left} {Term !right}

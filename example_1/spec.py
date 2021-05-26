@@ -1,3 +1,8 @@
+"""
+    Specification module : contains the definition of the grammar to build,
+    this should be changed to update the engine.
+    WARNING : DO NOT MODIFY THE ENGINE AS IT WILL BE REGENERATED EACH TIME /!\
+"""
 from item_engine.textbase import *
 
 __all__ = ['engine']
@@ -17,21 +22,21 @@ lexer, kws, sym = MakeLexer(
     }
 )
 
-# grp = GroupMaker({
-#     "unit": ["VAR", "INT"]
-# })
-#
-# parser, operators = MakeParser(
-#     operators={
-#         "Var": UNIT(n="VAR", k="name", t=str),
-#         "Int": UNIT(n="INT", k="value", t=int),
-#
-#         "Add": OP(grp["unit"], sym['+'], grp['unit'])
-#     },
-#     branches={
-#
-#     }
-# )
+grp = GroupMaker({
+    "unit": ["VAR", "INT"]
+})
+
+parser, operators = MakeParser(
+    operators={
+        "Var": UNIT(n="VAR", k="name", t=str),
+        "Int": UNIT(n="INT", k="value", t=int),
+
+        "Add": OP(grp["unit"], sym['+'], grp['unit'])
+    },
+    branches={
+
+    }
+)
 
 engine = Engine(
     name='engine',
@@ -47,19 +52,19 @@ engine = Engine(
             reflexive=False,
             skips=["WHITESPACE"]
         ),
-        # Parser(
-        #     name='parser',
-        #     branch_set=parser,
-        #     input_cls=Char,
-        #     output_cls=Token,
-        #     group_cls=TokenG,
-        #     formal_inputs=True,
-        #     formal_outputs=True,
-        #     reflexive=False,
-        #     skips=[]
-        # )
+        Parser(
+            name='parser',
+            branch_set=parser,
+            input_cls=Token,
+            output_cls=Lemma,
+            group_cls=TokenG,
+            formal_inputs=True,
+            formal_outputs=False,
+            reflexive=True,
+            skips=[]
+        )
     ],
-    # operators=operators
+    operators=operators
 )
 
 
