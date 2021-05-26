@@ -129,7 +129,7 @@ class OP:
         br_name = f"__{cls_name.upper()}__"
         return Branch(
             name=br_name,
-            rule=All(*self.matches),
+            rule=All.make(*self.matches),
             priority=0
         )
 
