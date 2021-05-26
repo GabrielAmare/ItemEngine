@@ -497,7 +497,7 @@ RuleCast = Union[Rule, Item, Group, bool, frozenset, set, tuple, list]
 VALID = Empty(True)
 ERROR = Empty(False)
 
-__all__ += ["Element", "OPTIONS"]
+__all__ += ["Element", "OPTIONS", "IE_SyntaxError"]
 
 
 class Element(ArgsHashed):
@@ -576,6 +576,13 @@ class Element(ArgsHashed):
     @property
     def is_error(self) -> bool:
         return self.is_terminal and self.value.startswith('!')
+
+
+class IE_SyntaxError(Exception):
+    def __init__(self, cur: Element, old: Element, new: Element):
+        self.cur: Element = cur
+        self.old: Element = old
+        self.new: Element = new
 
 
 class OPTIONS:

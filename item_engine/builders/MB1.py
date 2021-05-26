@@ -53,7 +53,8 @@ def META_BUILDER_1(name: str, fun: str, input_cls: Type[Element], output_cls: Ty
             NON_TERMINAL_CLAUSE,
             VALID_CLAUSE,
             EOF_CLAUSE,
-            VAR("SyntaxError").CALL(TUPLE((CUR, OLD, NEW))).RAISE()
+            IMPORT.FROM('item_engine', 'IE_SyntaxError'),
+            VAR("IE_SyntaxError").CALL(CUR, OLD, NEW).RAISE()
         ))
     )
 

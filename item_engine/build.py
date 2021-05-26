@@ -278,7 +278,7 @@ class Parser:
         :param skips: The list of element types that must be ignored (commonly used for white space patterns)
         :param reflexive: Will the parser receive what it emits (used to build recursive grammar)
         :param formal_inputs: Restrict the inputs to be consecutive
-        :param formal_outputs: Is the parser formal ? If it's the case, any ambiguity will raise a SyntaxError
+        :param formal_outputs: Is the parser formal ? If it's the case, any ambiguity will raise a IE_SyntaxError
         """
         self.name: str = name
         self.branch_set: BranchSet = branch_set
