@@ -10,10 +10,13 @@ class HashableDict(dict):
     def __hash__(self):
         return hash((type(self), tuple(sorted(self.items(), key=lambda item: item[0]))))
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({super().__repr__()})"
+
 
 E = TypeVar("E", bound=Element)
 
-__all__ = ["Lemma"]
+__all__ = ["Lemma", "HashableDict"]
 
 
 class Lemma(Element):
