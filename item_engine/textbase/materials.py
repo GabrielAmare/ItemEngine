@@ -4,7 +4,7 @@ from .items import *
 from .base_materials import *
 from .operators import OP, UNIT, ENUM
 from python_generator import MODULE, CLASS, EXPRESSION, IMPORT, DEF, ARG, SWITCH, ISINSTANCE, EXCEPTION, BLOCK, SCOPE, \
-    STATEMENT
+    STATEMENT, VAR
 
 __all__ = [
     "gen_symbols", "gen_keywords", "gen_branches", "gen_operators",
@@ -141,7 +141,7 @@ def gen_operators(**data: Dict[str, Union[UNIT, OP, ENUM]]) -> Tuple[List[Branch
                     ),
                     (
                         ISINSTANCE('e', t='Token'),
-                        SWITCH(ifs_units, EXCEPTION('e.value').RAISE())
+                        SWITCH(ifs_units, VAR('e').GETATTR('content').RETURN())
                     )
                 ],
                 EXCEPTION('e.value').RAISE()
