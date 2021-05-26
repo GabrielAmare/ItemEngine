@@ -1,6 +1,7 @@
 import python_generator as pg
 from .functions import *
 from .materials import SymbolMaker
+from .items import CharI
 from item_engine import include
 
 
@@ -32,8 +33,8 @@ n_alphanum = include(~alphanum.group)
 sq = include(charset("'"))
 dq = include(charset('"'))
 
-n_sq = include(~sq.group)
-n_dq = include(~dq.group)
+n_sq = include(~(sq.group + CharI('EOF')))
+n_dq = include(~(dq.group + CharI('EOF')))
 e_sq = string("\\'")
 e_dq = string('\\"')
 
