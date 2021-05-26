@@ -44,7 +44,7 @@ def META_BUILDER_3(name: str, fun: str, input_cls: Type[Element], output_cls: Ty
             NEW.GETATTR("value").IN(LIST(list(map(STR, skips)))),
             CONTINUE
         ).ELSE(
-            NEW.ASSIGN(VAR("replace").CALL(NEW, ARG("at", POS), ARG("to", POS.ADD(1)))),
+            NEW.ASSIGN(NEW.METH("replace", ARG("at", POS), ARG("to", POS.ADD(1)))),
             POS.IADD(1),
         ),
         NEW.YIELD(),
@@ -75,7 +75,6 @@ def META_BUILDER_3(name: str, fun: str, input_cls: Type[Element], output_cls: Ty
             IMPORT.FROM("typing", "Iterator"),
             IMPORT.FROM(input_cls.__module__, input_cls.__name__),
             IMPORT.FROM(output_cls.__module__, output_cls.__name__),
-            IMPORT.FROM("dataclasses", "replace"),
             # INITS
             CUR.ASSIGN(CURSOR(0), t=output_cls),
             POS.ASSIGN(0, t=int),

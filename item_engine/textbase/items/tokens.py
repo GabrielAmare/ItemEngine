@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Union, List, TypeVar, Tuple, Hashable, FrozenSet
 
 from python_generator import VAR, CONDITION, TUPLE
 
-from item_engine import Match, Element, INCLUDE, CASE, EXCLUDE
+from item_engine import Match, Element, INCLUDE, CASE, EXCLUDE, INDEX, STATE
 from .base import BaseItem, BaseGroup
 from .chars import Char
 
@@ -52,18 +51,37 @@ class TokenI(BaseItem):
         return TokenG(frozenset({self}))
 
 
-@dataclass(frozen=True, order=True)
 class Token(Element):
-    content: str = ""
-
     def __str__(self):
         return repr(self.content)
+
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return (*super().__args__, self.content)
+
+    def __init__(self, at: INDEX, to: INDEX, value: STATE, content: str = "", _at: INDEX = None, _to: INDEX = None):
+        super().__init__(at, to, value, _at, _to)
+        self.content: str = content
 
     def develop(self: E, case: CASE, item: Char) -> E:
         action, value = case
         if action == INCLUDE:
-            return self.__class__(at=self.at, to=item.to, value=value, content=self.content + str(item.value))
+            return self.__class__(
+                at=self.at,
+                to=item.to,
+                value=value,
+                content=self.content + str(item.value),
+                _at=self._at,
+                _to=item._to
+            )
         elif action == EXCLUDE:
-            return self.__class__(at=self.at, to=self.to, value=value, content=self.content)
+            return self.__class__(
+                at=self.at,
+                to=self.to,
+                value=value,
+                content=self.content,
+                _at=self._at,
+                _to=self._to
+            )
         else:
             raise ValueError(action)

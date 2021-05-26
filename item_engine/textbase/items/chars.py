@@ -47,7 +47,6 @@ class CharI(BaseItem):
         return CharG(frozenset({self}))
 
 
-@dataclass(frozen=True, order=True)
 class Char(Element):
     @classmethod
     def make(cls, at: INDEX, char: str):

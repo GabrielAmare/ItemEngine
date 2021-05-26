@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC
-from dataclasses import dataclass
 from functools import reduce
 from operator import and_
 from typing import Tuple, Iterator, FrozenSet, List, Union, Hashable, Iterable, Collection, TypeVar, Generic
@@ -501,45 +500,52 @@ ERROR = Empty(False)
 __all__ += ["Element", "OPTIONS"]
 
 
-@dataclass(frozen=True, order=True)
-class HasSpan:
-    at: INDEX
-    to: INDEX
+class Element(ArgsHashed):
+    @property
+    def __args__(self) -> Tuple[Hashable, ...]:
+        return type(self), self.at, self.to, self.value
+
+    def replace(self, **cfg):
+        data = self.__dict__.copy()
+        data.update(**cfg)
+        return self.__class__(**data)
+
+    def __init__(self, at: INDEX, to: INDEX, value: STATE, _at: INDEX = None, _to: INDEX = None):
+        self.at: INDEX = at
+        self.to: INDEX = to
+        self.value: STATE = value
+        self._at: INDEX = at if _at is None else _at
+        self._to: INDEX = to if _to is None else _to
 
     @property
     def span(self) -> Tuple[INDEX, INDEX]:
         return self.at, self.to
 
-    def lt(self, other: HasSpan) -> bool:
+    def lt(self, other: Element) -> bool:
         return self.to < other.at
 
-    def le(self, other: HasSpan) -> bool:
+    def le(self, other: Element) -> bool:
         return self.to <= other.at
 
-    def gt(self, other: HasSpan) -> bool:
+    def gt(self, other: Element) -> bool:
         return self.to > other.at
 
-    def ge(self, other: HasSpan) -> bool:
+    def ge(self, other: Element) -> bool:
         return self.to >= other.at
 
-    def eq(self, other: HasSpan) -> bool:
+    def eq(self, other: Element) -> bool:
         return self.at == other.at and self.to == other.to
 
-    def ne(self, other: HasSpan) -> bool:
+    def ne(self, other: Element) -> bool:
         return self.at != other.at or self.to != other.to
 
-    def ol(self, other: HasSpan) -> bool:
+    def ol(self, other: Element) -> bool:
         if other.at < self.to:
             return other.to > self.at
         elif other.at > self.to:
             return other.to < self.at
         else:
             return False
-
-
-@dataclass(frozen=True, order=True)
-class Element(HasSpan):
-    value: STATE
 
     @classmethod
     def EOF(cls, at: INDEX):
