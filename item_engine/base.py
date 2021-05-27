@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC
 from functools import reduce
 from operator import and_
-from typing import Tuple, Iterator, FrozenSet, List, Union, Hashable, Iterable, Collection, TypeVar, Generic
+from typing import Tuple, Iterator, FrozenSet, List, Union, Hashable, Iterable, Collection, TypeVar, Generic, Type
 
 from .constants import ACTION, INCLUDE, EXCLUDE, T_STATE, INDEX, STATE, CASE, NT_STATE, INF, EOF
 from .items import Item, Group
@@ -509,6 +509,17 @@ class Element(ArgsHashed):
         data = self.__dict__.copy()
         data.update(**cfg)
         return self.__class__(**data)
+
+    @classmethod
+    def after(cls, element: Element, value: STATE = 0) -> Element:
+        """Creates a new Element of ``cls`` at the end of this one"""
+        return cls(
+            at=element.to,
+            to=element.to,
+            value=value,
+            _at=element._to,
+            _to=element._to
+        )
 
     def __init__(self, at: INDEX, to: INDEX, value: STATE, _at: INDEX = None, _to: INDEX = None):
         self.at: INDEX = at
