@@ -9,14 +9,14 @@ __all__ = ["generate_tests"]
 def generate_tests(pckg: str,
                    inputs: List[str],
                    __test__: str = '__test__',
-                   __spec__: str = '__spec__',
+                   spec: str = 'spec',
                    __test_preview__: str = '__test_preview__',
                    remove_preview: bool = True
                    ):
     PATH_LIST = pckg.split('.')
 
     try:
-        __import__(name=__spec__, fromlist=PATH_LIST).engine.build(allow_overwrite=True)
+        __import__(name=spec, fromlist=PATH_LIST).engine.build(allow_overwrite=True)
 
     except ImportError:
         raise Exception("[TEST GENERATION] : engine build failure !")
@@ -51,7 +51,7 @@ PATH_LIST = {PATH_LIST!r}
 __all__ = ['run']
 
 try:
-    __import__(name={__spec__!r}, fromlist=PATH_LIST).engine.build(allow_overwrite=True)
+    __import__(name={spec!r}, fromlist=PATH_LIST).engine.build(allow_overwrite=True)
 
 except ImportError:
     raise Exception("[TEST GENERATION] : engine build failure !")
