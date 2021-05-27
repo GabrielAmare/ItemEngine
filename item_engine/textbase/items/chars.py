@@ -48,6 +48,15 @@ class CharI(BaseItem):
 
 
 class Char(Element):
+    def __repr__(self):
+        return f"{self.__class__.__name__}(" \
+               f"at={self.at!r}, " \
+               f"to={self.to!r}, " \
+               f"value={self.value!r}, " \
+               f"_at={self._at!r}, " \
+               f"_to={self._to!r}" \
+               f")"
+
     @classmethod
     def make(cls, at: INDEX, char: str):
         return Char(at=at, to=at + 1, value=T_STATE(char))

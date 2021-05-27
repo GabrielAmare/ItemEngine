@@ -63,6 +63,16 @@ class Token(Element):
         super().__init__(at, to, value, _at, _to)
         self.content: str = content
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(" \
+               f"at={self.at!r}, " \
+               f"to={self.to!r}, " \
+               f"value={self.value!r}, " \
+               f"_at={self._at!r}, " \
+               f"_to={self._to!r}" \
+               f"content={self.content!r}, " \
+               f")"
+
     def develop(self: E, case: CASE, item: Char) -> E:
         action, value = case
         if action == INCLUDE:
