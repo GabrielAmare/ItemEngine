@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Devlog - ItemEngine</title>
+    <!-- JQUERY -->
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" 
+            integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+            crossorigin="anonymous"></script>
+    <!-- POPPER -->
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+            integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+            crossorigin="anonymous"></script>
+    <!-- BOOTSTRAP -->
+    <link rel="stylesheet" 
+          href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"
+          integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l"
+          crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js" 
+            integrity="sha384-+YQ4JLhjyBLPDQt//I+STsc9iw4uQqACwlvpslubQzn4u2UU2UFM80nGisd026JF" 
+            crossorigin="anonymous"></script>
+    <style type="text/css">
+        @font-face {
+            font-family: "Ubuntu";
+            src: url("Ubuntu-Regular.ttf") format("truetype");
+        }
+        * {
+            font-family: "Ubuntu" !important;
+            /*background-color: #1c1c1c !important;
+            border-color: lightgray !important;
+            color: white;*/
+        }
+        h1 { font-size: 2.2em; }
+        h2 { font-size: 1.9em; }
+        h3 { font-size: 1.6em; }
+        h4 { font-size: 1.3em; }
+        p, section, article {
+            padding-left: 1.5em;
+            padding-top: 0.5em;
+        }
+        p { padding-top: 0.5em; }
+        article { padding-top: 2em; }
+        section { padding-top: 3em; }
+        i { font-style: normal; font-weight: bold; }
+        i.project { color: green; }
+        i.module { color: blue; }
+        i.error { color: red; }
+        i.classe { color: purple; }
+        i.instance { color: darkcyan; }
+        a.definition { color: darkorange; }
+        p.research {
+            color: blue;
+            border: 1px dotted blue;
+            border-radius: 5px;
+            padding: 0.5em;
+            font-size: 0.75em;
+        }
+        pre.code {
+            font-family: "Consolas" !important;
+            padding-left: 1em;
+            padding-right: 1em;
+            padding-top: 0.5em;
+            padding-bottom: 0.5em;
+            border: 1px solid gray;
+            border-radius: 2px;
+            width: min-content;
+            height: min-content;
+        }
+        table {
+            width: min-content !important;
+            min-width: 10em;
+        }
+        table.nowrap th {
+            white-space: nowrap;
+        }
+        table th {
+            padding: 0.75em !important;
+            font-size: 0.8em !important;
+            text-align: center;
+            vertical-align: middle !important;
+        }
+        table th.title {
+            font-size: 1.1em !important;
+            font-weight: bold;
+        }
+        .font-sm { font-size: 0.75em;  }
+    </style>
+    <script type="text/javascript">
+        $(function(){
+          $('[data-toggle="popover"]').popover()
+        });
+    </script>
+</head>
+<body class="container">
+    <h1>Devlog - ItemEngine</h1>
+    <!-- INTRODUCTION -->
+    <section>
+        <h2>Introduction</h2>
+        <p>
+            <i class="project">ItemEngine</i> est un programme de spécification de grammaire écrit en python. Il fournit un ensemble d'outils pour créer, paramétrer, tester et utiliser des langages.
+        </p>
+        <p>
+            Ce programme offre la possibilité de décrire des grammaires formelles et naturelles (resp. sans et avec ambiguïtés) dans un formalisme simple puisque il dispose d'un langage pour se faire.
+        </p>
+        <p>
+            Le projet fait suite à deux précédents, <i class="project">Genelang</i> et <i class="project">TextEngine</i>. Chacun avait des lacunes et des défauts majeurs qui les rendaient inutilisables lorsque les grammaires décrites étaient trop lourdes ou complexes. Leurs processus étaient <i class="error">lents</i>, restreints à des cadres d'application <i class="error">très limités</i>, remplis de <i class="error">bugs</i>, <i class="error">difficile à maintenir</i>, etc...
+        </p>
+        <p>
+            Le fonctionnement de <i class="project">ItemEngine</i> a donc été pensé et structuré pour prévenir ces défauts. C'est la raison de nombreux choix de développement qui seront explicités dans la suite de ce document.
+        </p>
+    </section>
+    <!-- STRUCTURE -->
+    <section>
+        <h2>Structure</h2>
+        <div>
+            <p>
+                <i class="project">ItemEngine</i> est constitué de différents <a class="definition" href="#lex-module">modules</a> qui gèrent tous une partie spécifique du processus complet :
+            </p>
+            <ul class="list-group">
+                <li class="list-group-item">
+                    <h4>item_engine/rules</h4>
+                    <p>
+                        Le module <i class="module" href="#lex-module">rules</i> gère la définition des règles de grammaire, et contient un ensemble de <a class="definition" href="#lex-class">classes</a> dédiées à cela.
+                    </p>
+                </li>
+                <li class="list-group-item">
+                    <h4>item_engine/build</h4>
+                    <p>
+                        Le module <i class="module" href="#lex-module">build</i> gère l'optimisation des règles fournies par l'utilisateur ainsi que l'écriture de l'<a class="definition" href="#lex-interpreter">interpréteur</a> associé à ces règles.
+                    </p>
+                </li>
+                <li class="list-group-item">
+                    <h4>item_engine/items</h4>
+                    <p>
+                        Le module <i class="module">items</i> contient les <a class="definition" href="#lex-abstract-class">classes abstraites</a> représentant les éléments utilisés et fabriqués par les règles de grammaires (ex : jetons, lemmes, groupes, ...)
+                    </p>
+                </li>
+                <li class="list-group-item">
+                    <h4>item_engine/constants</h4>
+                    <p>
+                        Regroupement des <a class="definition" href="#lex-constant">constantes</a> utilisées dans le <a class="definition" href="#lex-package">package</a>.
+                    </p>
+                </li>
+                <li class="list-group-item">
+                    <h4>item_engine/utils</h4>
+                    <p>
+                        Quelques <a class="definition" href="#lex-class">classes</a> et <a class="definition" href="#lex-function">fonctions</a> utilisées dans le <a class="definition" href="#lex-package">package</a> sans appartenance précise à un <a class="definition" href="#lex-module">module</a>.
+                    </p>
+                </li>
+            </ul>
+            <p>
+                Chacun de ces modules sera expliqué plus bas.
+            </p>
+        </div>
+    </section>
+    <!-- DEFINITION DES MODELES DE REGLE -->
+    <section>
+        <h3>Définition les modèles de règle</h3>
+        <p>Les <a class="definition" href="#lex-class">classes</a> de ce <a class="definition" href="#lex-module">module</a> définissent des modèles de règle atomiques et composites. Définir des règles de grammaire complexes se fait alors en composant ces modèles.</p>
+        <article>
+            <img class="img-thumbnail"
+                 src="rules_inheritance_diagram.png">
+            <aside>
+                <p class="font-sm">
+                    En bleu : les classes abstraites<br>
+                    En vert : les classes instanciables
+                </p>
+            </aside>
+        </article>
+        <!-- MODELES DE REGLE ABSTRAITS -->
+        <section>
+            <h3>Modèles de règle <a class="definition" href="#lex-abstract-class">abstraits</a></h3>
+            <article>
+                <h4>
+                    <i class="classe">Rule</i>
+                </h4>
+                <p>
+                    Classe générique dont hérite toutes les autres. Elle contient les comportement communs à tous les types de règles.
+                </p>
+            </article>
+            <article>
+                <h4>
+                    <i class="classe">RuleLeaf</i>, <i class="classe">RuleUnit</i> et <i class="classe">RuleIter</i>
+                </h4>
+                <p>
+                    Ces classes permettent de décomposer trois catégories de règles, respectivement celles : sans sous-règle, ayant 1 sous-règle, ayant une liste de sous-règles de 2 éléments ou plus
+                </p>
+            </article>
+            <article>
+                <h4>
+                    <i class="classe">RuleList</i> et <i class="classe">RuleSet</i>
+                </h4>
+                <p>
+                    Ces classes permettent la distinction entre les règles composées d'une <a class="definition" href="#lex-ordered-collection">collection ordonnée</a> de sous-règles de celles composées d'un <a class="definition" href="#lex-ordered-collection-without-repeats">collection non-ordonné et sans répétition</a> de sous-règles
+                </p>
+            </article>
+            <article>
+                <h4>
+                    <i class="classe">Skipable</i>
+                </h4>
+                <p>
+                    Cette classe représente les règles qui peuvent être ignorées lors de la recherche de motifs.
+                    Ex : vendu(e)(s) où le 'e' et le 's' peuvent être chacun ignorés, ce qui permettra à la règle de confirmer 'vendu', 'vendus', 'vendue' et 'vendues'.
+                </p>
+            </article>
+        </section>
+        <!-- MODELES DE REGLE INSTANCIABLES -->
+        <section>
+            <h3>Modèles de règle <a class="definition" href="#lex-class">instanciables</a></h3>
+            <article>
+                <h4>
+                    <i class="classe">Match</i>
+                </h4>
+                <p>
+                    Atome essentiel de la structure, c'est cette classe qui permettra de valider/invalider les <a class="definition" href="#lex-constitutive-element">éléments constitutifs</a>
+                </p>
+            </article>
+            <article>
+                <h4>
+                    <i class="classe">Empty</i>
+                </h4>
+                <p>
+                    Autre élément primordial de la structure, cette <a class="definition" href="#lex-class">classe</a> n'est en réalité jamais instanciée directement par l'utilisateur puisque elle ne possède que deux <a class="definition" href="#lex-instance">instances</a> utiles déjà créées dans le module : <i class="instance">VALID</i> et <i class="instance">ERROR</i>. Ces deux <a class="definition" href="#lex-instance">instances</a> permettent au programme de savoir quand la règle a trouvé ou non une correspondance dans le texte.
+                    Nous verrons plus loin comment.
+                </p>
+            </article>
+            <article>
+                <h4>
+                    <i class="classe">Optional</i>
+                </h4>
+                <p>
+                    Ce modèle de règle englobe une sous-règle, et permet le comportement suivant. Si la sous-règle valide une partie du texte, <i class="classe">Optional</i> se contente de transmettre l'information, dans le cas où la sous-règle n'est pas validée par le texte, <i class="classe">Optional</i> sera quand même valide mais sans sous-éléments.
+                    Ainsi, peut-importe le contenu du texte, <i class="classe">Optional</i> sera toujours valide.
+                    On peut simplfier le comportement de ce modèle par :
+                    
+                </p>
+                <pre class="code">Optional(X)  # recherche X, 0 ou 1 fois</pre>
+            </article>
+            <article>
+                <h4>
+                    <i class="classe">Repeat</i>
+                </h4>
+                <p>
+                    Sur le même principe qu'<i class="classe">Optional</i>, ce modèle de règle sera toujours valide. La différence est que, la sous-règle interne sera recherchée tant que la précédente itération sera valide.
+                    On peut simplifier le comportement de ce modèle par :
+                    
+                </p>
+                <pre class="code">Repeat(X)  # recherche X, 0 fois ou plus</pre>
+            </article>
+            <article>
+                <h4>
+                    <i class="classe">All</i>
+                </h4>
+                <p>
+                    Ce modèle de règle représente la mise en série de ses sous-règles. Le cas le plus simple sera alors résumé par :
+                </p>
+                <pre class="code">All(X, Y)  # recherche X puis Y</pre>
+                <div class="d-flex flex-row align-items-stretch">
+                    <p>
+                        Note : l'ordre des sous-règles est important
+                    </p>
+                    <pre class="code ml-3">All(X, Y) != All(Y, X)</pre>
+                </div>
+            </article>
+            <article>
+                <h4>
+                    <i class="classe">Any</i>
+                </h4>
+                <p>
+                    Ce modèle de règle représente la mise en dérivation de ses sous-règles. Le cas le plus simple sera alors résumé par :<br>
+                    
+                </p>
+                <pre class="code">Any(X, Y)  # recherche X ou Y</pre>
+                <div class="d-flex flex-row align-items-stretch">
+                    <p>
+                        Note : l'ordre des sous-règles n'importe pas
+                    </p>
+                    <pre class="code ml-3">Any(X, Y) == Any(Y, X)</pre>
+                </div>
+            </article>
+        </section>
+        <!-- MODELES DE REGLE INSTANCIABLES TOPLEVEL -->
+        <section>
+            <h3>Modèles de règle <a class="definition" href="#lex-class">instanciables</a> top-level</h3>
+            <article>
+                <h4>
+                    <i class="classe">Branch</i>
+                </h4>
+                <p>
+                    Ce modèle représente une règle de grammaire 'terminée'. Elle permet d'attribuer un nom à sa sous-règle ainsi qu'une priorité vis-à-vis des autres règles nommées.
+                </p>
+                <pre class="code">Branch(name="VAR", rule=All(Match(letters), Repeat(Match(letters)))<br>Branch(name="INT", rule=All(Match(digits), Repeat(Match(digits)))</pre>
+            </article>
+            <article>
+                <h4>
+                    <i class="classe">BranchSet</i>
+                </h4>
+                <p>
+                    Ce modèle représente l'ensemble des règles d'une grammaire.
+                </p>
+                <div class="d-flex flex-row align-items-stretch">
+                    <p>
+                        Note : Comme pour <i class="classe">Any</i>, l'ordre des branches n'importe pas.
+                    </p>
+                    <pre class="code ml-3">BranchSet(X, Y) == BranchSet(Y, X)</pre>
+                </div>
+            </article>
+        </section>
+    </section>
+    <!-- EXEMPLE DE GRAMMAIRE -->
+    <section>
+        <h2>Exemple de grammaire</h2>
+        <p>
+            Pour les règles suivantes :<br>
+            <ul>
+                <li>Un espace blanc est une séquence d'au moins un charactère d'espace</li>
+                <li>Une variable est une séquence d'au moins une lettre</li>
+                <li>Un nombre entier est une séquence d'au moins un chiffre</li>
+                <li>Les symboles + * / - = ( ) sont pris en compte</li>
+            </ul>
+        </p>
+        <p>
+            On pourrait écrire le pseudo-code ci-dessous :
+        </p>
+        <pre class="code">
+space = ' '
+letters = 'abcdefghijklmnopqrstuvwxyz'
+digits = '0123456789'
+
+grammar = BranchSet(
+    Branch(name="SPC", rule=All(Match(space), Repeat(Match(space))),
+    Branch(name="VAR", rule=All(Match(letters), Repeat(Match(letters))),
+    Branch(name="INT", rule=All(Match(digits), Repeat(Match(digits))),
+    Branch(name="ADD", rule=Match('+')),
+    Branch(name="SUB", rule=Match('-')),
+    Branch(name="MUL", rule=Match('*')),
+    Branch(name="DIV", rule=Match('/')),
+    Branch(name="LP", rule=Match('(')),
+    Branch(name="RP", rule=Match(')'))
+)</pre>
+    </section>
+    <!-- OPTIMISATION DES REGLES -->
+    <section>
+        <h2>Optimisations des règles</h2>
+        <!-- APPROCHE NAÏVE -->
+        <article>
+            <h3>
+                <i class="classe">Approche naïve</i>
+            </h3>
+            <p>
+                Si on considère le texte suivant 'Quel est le resultat de 5 + 40 * 10 ?'. On peut distinguer différentes sortes de motifs.<br>
+                D'abord les mots 'Quel', 'est', 'le', 'resultat', 'de' ;<br>
+                Puis les nombres '5', '40' et '10';<br>
+                Et les symboles '+', '*', '?'.<br>
+                Qui composent la phrase, et qui sont définis, plus ou moins clairement dans le langage dont cette phrase est issue.<br>
+                Ici un hybride entre le  français composé de mots et de ponctuation, et le langage mathématique composé de nombres et d'opérateurs.
+            </p>
+            <p>
+                Notre cerveau est équipé de la machinerie permettant l'apprentissage de ces langages, c'est ce qui nous permet de savoir que cette phrase attends la réponse 405.
+                Mais ce n'est pas le cas d'un ordinateur, qui n'est pas équipé à priori pour ce type de tâches.
+            </p>
+            <p>
+                Une première réflexion sur les étapes nécessaires à ce qu'une machine puisse aboutir à ce même résultat serait :
+                    Décomposer la phrase en sous-motifs, puis recomposer ces sous-motifs en structures qui puisse prendre en compte les règles de grammaire que nous connaissons.
+                    Ces deux étapes sont généralement nommées en interprétation de langage <a class="definition" href="#lex-lexing">lexing</a> et <a class="definition" href="#lex-parsing">parsing</a>, et sont réalisées respectivement par un <a class="definition" href="#lex-lexer">lexer</a> et un <a class="definition" href="#lex-parser">parser</a>.
+            </p>
+            <p>
+                Le <a class="definition" href="#lex-lexer">lexer</a> transforme du texte en <a class="definition" href="#lex-token">tokens</a>, tandis que le <a class="definition" href="#lex-parser">parser</a> transforme ces <a class="definition" href="#lex-token">tokens</a> en <a class="definition" href="#lex-ast">AST</a>
+            </p>
+            <img class="img-thumbnail"
+                 src="lexer_parser_chain.png">
+        <!-- LEXER -->
+        <article>
+            <h3>
+                <i class="classe">Lexer</i>
+            </h3>
+            <p>
+                Une approche naïve pour décrire à un ordinateur comment découper cette phrase en <a class="definition" href="#lex-token">tokens</a>, serait de lui donner la liste des expressions recherchées associées à leur type :
+            </p>
+            <table class="table table-bordered table-sm nowrap">
+                <thead>
+                    <tr>
+                        <th class="title">expression</th>
+                        <th class="title">type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th>Quel</th>
+                        <th>MOT</th>
+                    </tr>
+                    <tr>
+                        <th>est</th>
+                        <th>MOT</th>
+                    </tr>
+                    <tr>
+                        <th>le</th>
+                        <th>MOT</th>
+                    </tr>
+                    <tr>
+                        <th>resultat</th>
+                        <th>MOT</th>
+                    </tr>
+                    <tr>
+                        <th>de</th>
+                        <th>MOT</th>
+                    </tr>
+                    <tr>
+                        <th>5</th>
+                        <th>NOMBRE</th>
+                    </tr>
+                    <tr>
+                        <th>40</th>
+                        <th>NOMBRE</th>
+                    </tr>
+                    <tr>
+                        <th>10</th>
+                        <th>NOMBRE</th>
+                    </tr>
+                    <tr>
+                        <th>+</th>
+                        <th>PLUS</th>
+                    </tr>
+                    <tr>
+                        <th>*</th>
+                        <th>MULTIPLIER</th>
+                    </tr>
+                    <tr>
+                        <th>?</th>
+                        <th>QUESTION</th>
+                    </tr>
+                    <tr>
+                        <th> </th>
+                        <th>ESPACE</th>
+                    </tr>
+                </tbody>
+            </table>
+            <p>
+                Ainsi à chaque fois qu'une expression est trouvée dans le texte, le programme peut facilement la retrouver et lui assigner le type correspondant. Mais on peut déjà voir les problèmes liés à cette approche. Elle nécessitera de connaître et d'écrire à l'avance tous les motifs possibles, sans quoi la machine ne pourra pas les lire. Et c'est la plupart du temps impossible car cette liste devrait contenir une infinité de motifs.
+            </p>
+            <p>
+                Pour résoudre cette problématique, on incluera le principe des modèles de motifs, qui dans notre cas sera utile pour les mots et les nombres.
+            </p>
+            <p>
+                Note : les modèles ... écrits entre r'...' sont des expressions régulières (regex)
+            </p>
+            <table class="table table-bordered table-sm nowrap">
+                <thead>
+                    <tr>
+                        <th class="title">modèle</th>
+                        <th class="title">type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th>r'[a-zA-Z]+'</th>
+                        <th>MOT</th>
+                    </tr>
+                    <tr>
+                        <th>r'[0-9]+'</th>
+                        <th>NOMBRE</th>
+                    </tr>
+                    <tr>
+                        <th>r'[ ]+'</th>
+                        <th>ESPACE</th>
+                    </tr>
+                    <tr>
+                        <th>'+'</th>
+                        <th>PLUS</th>
+                    </tr>
+                    <tr>
+                        <th>'*'</th>
+                        <th>MULTIPLIER</th>
+                    </tr>
+                    <tr>
+                        <th>'?'</th>
+                        <th>QUESTION</th>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="research">
+                étant donné un texte écrit dans un langage dont on connaît les élément constitutifs mais pas les modèles de motifs. Si on dispose d'un corpus de textes écrits dans ce langage (on dispose donc de motifs), existe t'il une procédure permettant d'induire ou de déduire les modèles de motifs ?
+            </p>
+            <p>
+                Comme les motifs ESPACE ne servent ici que comme séparateurs, ils ne seront pas conservés.
+            </p>
+            <p>
+                Voici une implémentation en python 3 du programme décrit ci-dessus et son output :
+            </p>
+            <div class="d-flex flex-row">
+                <pre class="code">
+from typing import List, Tuple, Dict
+import re
+
+patterns: Dict[str, re.Pattern] = {
+    'MOT': re.compile(r"[a-zA-Z]+"),
+    'NUMBER': re.compile(r"[0-9]+"),
+    'ESPACE': re.compile(r"[ ]+"),
+    'PLUS': re.compile(r"\+"),
+    'MULTIPLIER': re.compile(r"\*"),
+    'QUESTION': re.compile(r"\?"),
+}
+
+
+def tokenize(text: str) -> List[Tuple[str, str]]:
+    tokens: List[Tuple[str, str]] = []
+    index = 0
+    while index < len(text):
+        for name, pattern in patterns.items():
+            match = pattern.match(text[index:])
+            if match:
+                content = match.group()
+                index += len(content)
+                if name != "ESPACE":
+                    tokens.append((name, content))
+                continue
+    return tokens
+
+
+if __name__ == '__main__':
+    tokens = tokenize("Quel est le resultat de 5 + 40 * 10 ?")
+    for token in tokens:
+        print(token)</pre>
+                <pre class="code ml-2">
+('MOT', 'Quel')
+('MOT', 'est')
+('MOT', 'le')
+('MOT', 'resultat')
+('MOT', 'de')
+('NUMBER', '5')
+('PLUS', '+')
+('NUMBER', '40')
+('MULTIPLIER', '*')
+('NUMBER', '10')
+('QUESTION', '?')</pre>
+            </div>
+            <p>
+                Cette approche possède certains défauts :
+                <ul>
+                    <li>les motifs sont testés les uns après les autres jusqu'à trouver le bon.</li>
+                    <li>il est facile de faire des erreurs, car très souvent, l'ordre dans lequel les motifs sont spécifiés est important.</li>
+                    <li>modifier les règles de grammaires nécessite beaucoup de vigilance pour ne pas créer de conflits entre règles</li>
+                    <li>cette approche est difficilement extensible à d'autres étapes de l'interprétation de texte (<a class="definition" href="#lex-ast">AST</a>, <a class="definition" href="#lex-cst">CST</a>)</li>
+                </ul>
+            </p>
+        </article>
+    </section>
+    <section>
+        <h2>Lexique</h2>
+        <table class="table table-bordered w-100">
+            <thead>
+                <tr>
+                    <th>mot</th>
+                    <th>définition</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="lex-class">
+                    <th>Class</th>
+                    <th class="text-left">
+                            Une classe est un modèle pour des objets (alors appelés <a class="definition" href="#lex-instance">instances</a>), elle contient un ensemble de <a class="definition" href="#lex-field">champs</a> ainsi que des <a class="definition" href="#lex-method">méthodes</a>
+                    </th>
+                </tr>
+                <tr id="lex-abstract-class">
+                    <th>Abstract Class</th>
+                    <th class="text-left">
+                            Une classe abstraite est une classe qui ne peut pas avoir d'instances. En revanche, on peut faire hériter d'autres classes d'une classe abstraite.<br>
+                            L'utilisation typique d'une classe abstraite est de définir des données requises et des comportements que toutes ses sous-classes devront implémenter.
+                    </th>
+                </tr>
+                <tr id="lex-field">
+                    <th>Field</th>
+                    <th class="text-left">
+                            Un champ appartient à une <a class="definition" href="#lex-class">classe</a>, il définit une association clef-valeur. On peut ainsi stocker des valeurs dans les instances d'une <a class="definition" href="#lex-class">classe</a>
+                    </th>
+                </tr>
+                <tr id="lex-variable">
+                    <th>Variable</th>
+                    <th class="text-left">
+                            Une variable est un nom auquel est associé une valeur. Pendant l'exécution d'un programme, la variable représente une valeur en mémoire.
+                    </th>
+                </tr>
+                <tr id="lex-constant">
+                    <th>Constant</th>
+                    <th class="text-left">
+                            Une constante est un nom auquel est associé une valeur. Cette valeur ne changera pas pendant l'exécution d'un programme.
+                    </th>
+                </tr>
+                <tr id="lex-parameter">
+                    <th>Parameter</th>
+                    <th class="text-left">
+                            Un paramètre est un nom associé à une valeur, représentant une valeur définie hors du contexte d'une fonction. Pendant l'exécution d'un programme, le paramètre prendra sa valeur lors de l'appel de la fonction. Et dans le contexte d'exécution de la fonction, sera équivalent à une variable ou à une constante.
+                    </th>
+                </tr>
+                <tr id="lex-method">
+                    <th>Method</th>
+                    <th class="text-left">
+                            Une méthode est une <a class="definition" href="#lex-function">fonction</a> associée à une <a class="definition" href="#lex-class">classe</a>. Elle retranscrit alors un comportement des <a class="definition" href="#lex-instance">instances</a> de cette <a class="definition" href="#lex-class">classe</a>.
+                    </th>
+                </tr>
+                <tr id="lex-instance">
+                    <th>Instance</th>
+                    <th class="text-left">
+                            Une instance est un objet définit à partir d'un modèle (<a class="definition" href="#lex-class">classe</a> de l'objet).
+                    </th>
+                </tr>
+                <tr id="lex-function">
+                    <th>Function</th>
+                    <th class="text-left">
+                            Une fonction permet d'associer des données en entrée à de nouvelles données en sortie.
+                    </th>
+                </tr>
+                <tr id="lex-ast">
+                    <th>AST (Abstract Syntax Tree)</th>
+                    <th class="text-left">
+                            Un arbre de syntaxe abstraite permet de représenter une structure dans le texte.
+                    </th>
+                </tr>
+                <tr id="lex-cst">
+                    <th>CST (Concrete Syntax Tree)</th>
+                    <th class="text-left">
+                            Un arbre de syntaxe concrète permet de représenter une structure du texte et d'associer des comportement à ces structures.
+                    </th>
+                </tr>
+                <tr id="lex-lexer">
+                    <th>Lexer (Lexical Analyser)</th>
+                    <th class="text-left">
+                        Un lexer est un algorithme permettant de découper un texte en tokens qui le constitue. Un lexer est la retranscription algorithmique d'un ensemble de règles descriptive des modèles de motifs d'un langage.
+                    </th>
+                </tr>
+                <tr id="lex-parser">
+                    <th>Parser</th>
+                    <th class="text-left">
+                        Un parser est un algorithme permettant de construire un AST à partir de tokens. Un parser est la retranscription algorithmique d'un ensemble de règles de grammaires.
+                    </th>
+                </tr>
+                <tr id="lex-token">
+                    <th>Token</th>
+                    <th class="text-left">
+                        Un jeton représente généralement une portion d'un texte à laquelle on à associé un type précis.<br>
+                        Un token simple, contiendra seulement la partie du texte en question et le type associé.<br>
+                        Un token plus complet aura aussi des valeurs telles que :<br>
+                        <ul>
+                            <li>l'index de départ et d'arrivée dans le texte (pour identifier la partie ciblée).</li>
+                            <li>un numéro de token, permettant de savoir sa position dans la liste de tokens.</li>
+                            <li>d'autres informations complémentaires.</li>
+                        </ul>
+                    </th>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+</body>
+</html>
