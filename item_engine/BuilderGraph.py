@@ -1,7 +1,7 @@
 from graph37 import DAG
 
 from .constants import NT_STATE, T_STATE, ACTION, INCLUDE, EXCLUDE
-from .base import Group
+from .rules import Group
 
 __all__ = ["BuilderGraph"]
 

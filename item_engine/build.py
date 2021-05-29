@@ -10,7 +10,7 @@ from python_generator import VAR, DEF, ARGS, INT, IF, BLOCK, STR, LIST, IMPORT, 
     RETURN, YIELD, SWITCH, FSTR, EXCEPTION, MODULE, PACKAGE, STATEMENT, ARG
 
 from .BuilderGraph import BuilderGraph
-from .base import BranchSet, Branch
+from .rules import BranchSet, Branch
 from .constants import ACTION, STATE, NT_STATE, T_STATE
 from .elements import Element
 from .items import Group, Item
