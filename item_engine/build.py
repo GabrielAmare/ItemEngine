@@ -10,8 +10,10 @@ from python_generator import VAR, DEF, ARGS, INT, IF, BLOCK, STR, LIST, IMPORT, 
     RETURN, YIELD, SWITCH, FSTR, EXCEPTION, MODULE, PACKAGE, STATEMENT, ARG
 
 from .BuilderGraph import BuilderGraph
-from .base import Group, BranchSet, Branch, Element, Item
+from .base import BranchSet, Branch
 from .constants import ACTION, STATE, NT_STATE, T_STATE
+from .elements import Element
+from .items import Group, Item
 from .utils import ArgsHashed
 
 DEBUG_GROUP_TO_OUTCOME = False
