@@ -47,7 +47,22 @@
         i.error { color: red; }
         i.classe { color: purple; }
         i.instance { color: darkcyan; }
+
         a.definition { color: darkorange; }
+
+        small {
+            border: 2px solid blue;
+            border-radius: 4px;
+            padding: 0.25em 0.5em 0.25em 0.5em;
+            margin: 2px;
+            white-space: nowrap;
+        }
+        small.yellow { background-color: #f9fc12; }
+        small.brown { background-color: #abad0e; }
+        small.white { background-color: white; }
+        small.green { background-color: lime; }
+        small.red { background-color: red; }
+
         p.research {
             color: blue;
             border: 1px dotted blue;
@@ -65,6 +80,17 @@
             border-radius: 2px;
             width: min-content;
             height: min-content;
+        }
+        pre.text {
+            font-family: "Consolas" !important;
+            font-weight: normal !important;
+            background-color: lightgreen;
+            color: black;
+            padding: 3px !important;
+            font-size: 0.8em;
+            display: inline;
+            margin-left: 0.25em !important;
+            margin-right: 0.25em !important;
         }
         table {
             width: min-content !important;
@@ -544,7 +570,39 @@ if __name__ == '__main__':
                 </ul>
             </p>
         </article>
+        <!-- GRAPHE DE LA MACHINE A ETAT -->
+        <article>
+            <h3>Graphe de la machine à état</h3>
+            <img src="lexer_grammar_decomposition.svg" class="img-thumbnail">
+        </article>
+        <aside>
+            <p>Code couleur :</p>
+            <div class="d-flex">
+                <small class="yellow">charactère inclus</small>
+                <small class="brown">charactère exclus</small>
+                <small class="white">état non-terminal</small>
+                <small class="green">état valide</small>
+                <small class="red">état invalide</small>
+            </div>
+            <article>
+                <h4>Lecture du graphe :</h4>
+                    le texte suivant <pre class="text">xy3+</pre> sera lu de la sorte :<br>
+                    - on démarre sur l'état <small class="white">0</small> au premier charactère du texte <pre class="text">x</pre> avec une pile vide <pre class="text"></pre><br>
+                    - <small class="yellow">'A-Z_a-z'</small> contient le charactère <pre class="text">x</pre>, il est donc inclus dans la pile <pre class="text">x</pre> puis on transite vers l'état <small class="white">3</small> en attente du charactère suivant.<br>
+                    - le charactère suivant <pre class="text">y</pre> est présent dans <small class="yellow">'0-9A-Z_a-z'</small>, il est donc inclus dans la pile <pre class="text">xy</pre> puis on revient sur l'état <small class="white">3</small>.<br>
+                    - le charactère suivant <pre class="text">3</pre> est présent de nouveau dans <small class="yellow">'0-9A-Z_a-z'</small>, on effectue donc la même chose que précédemment.
+                    La pile devient <pre class="text">xy3</pre> et l'état courant est toujours <small class="white">3</small>.<br>
+                    - le charctère suivant est <pre class="text">+</pre>, qui en l'occurence n'est pas présent dans <small class="yellow">'0-9A-Z_a-z'</small>. Par conséquent on choisi l'option par defaut, le charactère est exclus (donc pas ajouté à la pile) et on transite vers l'état <small class="green">'VAR'</small>.<br>
+                    - comme l'état <small class="green">'VAR'</small> est un état terminal on s'arrête là pour ce motif.
+            </article>
+            
+            
+            
+            
+            
+        </aside>
     </section>
+    <!-- LEXIQUE -->
     <section>
         <h2>Lexique</h2>
         <table class="table table-bordered w-100">
