@@ -14,14 +14,8 @@ def rt_tokens(tokens: Iterator[Token]) -> ReprTable:
 
 
 def rt_lemmas(lemmas: Iterator[Lemma]) -> ReprTable:
-    def makestr(k, v):
-        if isinstance(v, list):
-            return "\n".join(makestr(f"{k!s}[{i!s}]", e) for i, e in enumerate(v))
-        else:
-            return f"{k!r} = {v!r}"
-
     return ReprTable.from_items(lemmas, {
         "span": lambda lemma: repr(lemma.span),
         "value": lambda lemma: str(lemma.value),
-        "childs": lambda lemma: "\n".join(makestr(k, v) for k, v in lemma.data.items())
+        "childs": lambda lemma: str(lemma)
     })
