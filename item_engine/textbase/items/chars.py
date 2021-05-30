@@ -19,8 +19,8 @@ class CharG(BaseGroup):
     @property
     def items_str(self) -> str:
         s = ''.join(sorted(repr(item.char)[1:-1] for item in self.items))
-        s = s.replace('0123456789', r'\d')
-        return repr(s).replace('\\\\', '\\')
+        s = s.replace('0123456789', r'0-9').replace('\t', '\\t').replace('\n', '\\n')
+        return repr(s)
 
     def condition(self, item: VAR) -> CONDITION:
         expr = ''.join(sorted(map(str, self.items)))
@@ -38,6 +38,9 @@ class CharI(BaseItem):
     def __init__(self, char: str):
         assert len(char) == 1 or char == EOF
         self.char: str = char
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.char!r})"
 
     def __str__(self):
         return self.char
