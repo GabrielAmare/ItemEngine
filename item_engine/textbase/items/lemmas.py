@@ -36,7 +36,7 @@ class Lemma(Element):
                f"to={self.to!r}, " \
                f"value={self.value!r}, " \
                f"_at={self._at!r}, " \
-               f"_to={self._to!r}" \
+               f"_to={self._to!r}," \
                f"data={self.data!r}" \
                f")"
 

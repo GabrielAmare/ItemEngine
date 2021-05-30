@@ -69,8 +69,8 @@ class Token(Element):
                f"to={self.to!r}, " \
                f"value={self.value!r}, " \
                f"_at={self._at!r}, " \
-               f"_to={self._to!r}" \
-               f"content={self.content!r}, " \
+               f"_to={self._to!r}, " \
+               f"content={self.content!r}" \
                f")"
 
     def develop(self: E, case: CASE, item: Char) -> E:
