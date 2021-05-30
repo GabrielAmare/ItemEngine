@@ -70,6 +70,10 @@ class Element(ArgsHashed):
     def EOF(cls, at: INDEX):
         return cls(at=at, to=at, value=T_STATE(EOF))
 
+    @classmethod
+    def cursor(cls, at: INDEX) -> Element:
+        return cls(at=at, to=at, value=0)
+
     def develop(self, case: CASE, item: Element) -> Element:
         raise NotImplementedError
 
