@@ -30,6 +30,17 @@ class Lemma(Element):
             data = {}
         self.data: HashableDict = HashableDict(data)
 
+    def __str__(self):
+        childs = []
+        for k, v in self.data.items():
+            if isinstance(v, list):
+                for i, e in enumerate(v):
+                    childs.append(f'{k!s}[{i!s}]={e!s}')
+            else:
+                childs.append(f'{k!s}={v!s}')
+        body = '\n'.join(childs)
+        return str(self.value) + '(\n' + '\n'.join('    ' + l for l in body.split('\n')) + '\n)'
+
     def __repr__(self):
         return f"{self.__class__.__name__}(" \
                f"at={self.at!r}, " \
