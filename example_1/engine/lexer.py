@@ -70,7 +70,7 @@ def lexer(src: Iterator[Char]) -> Iterator[Token]:
                 cur = new
                 continue
             if new.is_valid:
-                cur = Token(at=new.to, to=new.to, value=0)
+                cur = Token.after(new)
                 if new.value in ['WHITESPACE']:
                     continue
                 else:

@@ -71,6 +71,8 @@ engine = Engine(
 def main():
     engine.build(allow_overwrite=True)
 
+    engine.parsers[0].data().graph.display()
+
 
 if __name__ == '__main__':
     main()

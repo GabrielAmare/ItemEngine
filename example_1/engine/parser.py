@@ -46,7 +46,7 @@ def parser(src: Iterator[Token]) -> Iterator[Lemma]:
             j += 1
             if oldr.at in curs:
                 queue = curs[oldr.at]
-                add_cur(Lemma(at=oldr.at, to=oldr.at, value=0))
+                add_cur(Lemma.after(oldr))
                 i = 0
                 while i < len(queue):
                     cur: Lemma = queue[i]
@@ -58,7 +58,7 @@ def parser(src: Iterator[Token]) -> Iterator[Lemma]:
                         if new.is_valid:
                             if new not in stack:
                                 stack.insert(j, new)
-                            add_cur(Lemma(at=new.to, to=new.to, value=0))
+                            add_cur(Lemma.after(new))
                             yield new
                             continue
                 continue

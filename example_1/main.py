@@ -3,7 +3,7 @@ from example_1.spec import engine
 engine.build(allow_overwrite=True)
 
 from example_1.engine import parse
-from item_engine.textbase import make_characters, rt_tokens
+from item_engine.textbase import make_characters, rt_lemmas
 
 
 def get(text: str):
@@ -16,7 +16,7 @@ def main():
         if not text:
             break
 
-        print(rt_tokens(get(text)))
+        print(rt_lemmas(get(text)))
 
 
 if __name__ == '__main__':
