@@ -91,7 +91,7 @@ class Or:
         return type(self) is type(other) and self.c0 == other.c0 and self.c1 == other.c1
 
 
-class Repeat:
+class Enum:
     def __init__(self, c0, c1):
         self.c0 = c0
         self.c1 = c1
@@ -104,6 +104,38 @@ class Repeat:
     
     def __eq__(self, other):
         return type(self) is type(other) and self.c0 == other.c0 and self.c1 == other.c1
+
+
+class Optional:
+    def __init__(self, c0, c1, c2):
+        self.c0 = c0
+        self.c1 = c1
+        self.c2 = c2
+    
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.c0!r}, {self.c1!r}, {self.c2!r})'
+    
+    def __str__(self):
+        return f'{self.c0!s}{self.c1!s}{self.c2!s}'
+    
+    def __eq__(self, other):
+        return type(self) is type(other) and self.c0 == other.c0 and self.c1 == other.c1 and self.c2 == other.c2
+
+
+class Repeat:
+    def __init__(self, c0, c1, c2):
+        self.c0 = c0
+        self.c1 = c1
+        self.c2 = c2
+    
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.c0!r}, {self.c1!r}, {self.c2!r})'
+    
+    def __str__(self):
+        return f'{self.c0!s}{self.c1!s}{self.c2!s}'
+    
+    def __eq__(self, other):
+        return type(self) is type(other) and self.c0 == other.c0 and self.c1 == other.c1 and self.c2 == other.c2
 
 
 class Operator:
@@ -149,8 +181,12 @@ def build(e: Element):
             return And(build(e.data['c0']), build(e.data['c1']))
         elif e.value == '__OR__':
             return Or(build(e.data['c0']), build(e.data['c1']))
+        elif e.value == '__ENUM__':
+            return Enum(build(e.data['c0']), build(e.data['c1']))
+        elif e.value == '__OPTIONAL__':
+            return Optional(build(e.data['c0']), build(e.data['c1']), build(e.data['c2']))
         elif e.value == '__REPEAT__':
-            return Repeat(build(e.data['c0']), build(e.data['c1']))
+            return Repeat(build(e.data['c0']), build(e.data['c1']), build(e.data['c2']))
         elif e.value == '__OPERATOR__':
             return Operator(build(e.data['c0']), build(e.data['c1']))
         elif e.value == '__GRAMMAR__':

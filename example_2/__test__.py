@@ -47,7 +47,7 @@ def run():
         Literal("'literal'")
     ])
     test("'sep'.{I *i}", [
-        Repeat(Literal("'sep'"), MatchIn('I', 'i'))
+        Enum(Literal("'sep'"), MatchIn('I', 'i'))
     ])
     test('{X !x} {Y !y} | {Z !z} {T !t}', [
         Or(And(MatchAs('X', 'x'), MatchAs('Y', 'y')), And(MatchAs('Z', 'z'), MatchAs('T', 't')))

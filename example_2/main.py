@@ -21,8 +21,11 @@ def get(text: str):
 
 
 def builder(lemmas):
-    *lemmas, eof = lemmas
-    return [build(lemma) for lemma in lemmas if lemma.at == 0 and lemma.to == eof.to]
+    try:
+        *lemmas, eof = lemmas
+        return [build(lemma) for lemma in lemmas if lemma.at == 0 and lemma.to == eof.to]
+    except:
+        return []
 
 
 # def main():

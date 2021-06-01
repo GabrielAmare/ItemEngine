@@ -3,7 +3,6 @@ from item_engine.textbase.items.chars import Char
 from item_engine.textbase.items.tokens import Token
 from typing import Iterator, Tuple
 
-
 __all__ = ['lexer']
 
 
@@ -23,6 +22,10 @@ def _lexer(current: Token, item: Char) -> Tuple[ACTION, STATE]:
             return '∈', 'AMPS'
         elif item.value == "'":
             return '∈', 3
+        elif item.value == '(':
+            return '∈', 'LP'
+        elif item.value == ')':
+            return '∈', 'RP'
         elif item.value == '*':
             return '∈', 'STAR'
         elif item.value == '.':
@@ -31,6 +34,10 @@ def _lexer(current: Token, item: Char) -> Tuple[ACTION, STATE]:
             return '∈', 'EQUAL'
         elif item.value in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz':
             return '∈', 4
+        elif item.value == '[':
+            return '∈', 'LB'
+        elif item.value == ']':
+            return '∈', 'RB'
         elif item.value == '{':
             return '∈', 'LS'
         elif item.value == '|':
@@ -38,7 +45,7 @@ def _lexer(current: Token, item: Char) -> Tuple[ACTION, STATE]:
         elif item.value == '}':
             return '∈', 'RS'
         else:
-            return '∉', '!AMPS|DOT|EQUAL|EXC|LS|NEWLINE|RS|STAR|VBAR'
+            return '∉', '!AMPS|DOT|EQUAL|EXC|LB|LP|LS|NEWLINE|RB|RP|RS|STAR|VBAR'
     elif current.value == 1:
         if item.value in '\nEOF':
             return '∉', 'COMMENT'
@@ -82,7 +89,7 @@ def lexer(src: Iterator[Char]) -> Iterator[Token]:
                 cur = new
                 continue
             if new.is_valid:
-                cur = Token(at=new.to, to=new.to, value=0)
+                cur = Token.after(new)
                 if new.value in ['WHITESPACE']:
                     continue
                 else:

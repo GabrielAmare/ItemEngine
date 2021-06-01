@@ -12,7 +12,7 @@ not_eof = CharG({CharI(char=EOF)}, True).inc()
 lexer, kws, sym = MakeLexer(
     keywords=[],
     symbols=[
-        '{', '}', '!', '*', '=', '|', '&', '\n', '.'
+        '{', '}', '!', '*', '=', '|', '&', '\n', '.', '[', ']', '(', ')'
     ],
     branches={
         "VAR": alpha & alphanum.repeat(0, INF),
@@ -27,7 +27,7 @@ S1 = "S1"
 S2 = "S2"
 
 grp = GroupMaker({
-    S2: ["__LITERAL__", "__MATCH__", "__MATCHAS__", "__MATCHIN__", "__REPEAT__"],
+    S2: ["__LITERAL__", "__MATCH__", "__MATCHAS__", "__MATCHIN__", "__ENUM__", "__OPTIONAL__", "__REPEAT__"],
 
     S1: [S2, "__AND__"],
 
@@ -47,7 +47,10 @@ parser, operators = MakeParser(
         "And": OP(grp[S1], grp[S2]),
         "Or": OP(grp[S0], sym['|'], grp[S1]),
 
-        "Repeat": OP(grp["__LITERAL__"], sym['.'], grp[S2]),
+        "Enum": OP(grp["__LITERAL__"], sym['.'], grp[S2]),
+
+        "Optional": OP(grp['['], grp[S0], grp[']']),
+        "Repeat": OP(grp['('], grp[S0], grp[')']),
 
         "Operator": OP(grp['VAR'], sym['='], grp[S0]),
 
