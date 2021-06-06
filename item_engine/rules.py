@@ -256,7 +256,7 @@ class BranchSet(RuleSet[Branch]):
         super().__init__(*rules)
 
     def __str__(self):
-        pass
+        return "\n".join(map(str, self.rules))
 
     @property
     def splited(self) -> Iterator[Tuple[Match, Branch]]:
