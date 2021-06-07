@@ -4,6 +4,7 @@ from typing import Union, TypeVar, Tuple, Hashable
 
 from item_engine import Element, INCLUDE, CASE, EXCLUDE, INDEX, STATE
 from .tokens import Token
+from copy import copy
 
 
 class HashableDict(dict):
@@ -12,6 +13,12 @@ class HashableDict(dict):
 
     def __repr__(self):
         return f"{self.__class__.__name__}({super().__repr__()})"
+
+    def __copy__(self) -> HashableDict:
+        new = HashableDict()
+        for key, val in self.items():
+            new[key] = copy(val)
+        return new
 
 
 E = TypeVar("E", bound=Element)
@@ -26,9 +33,7 @@ class Lemma(Element):
 
     def __init__(self, at: INDEX, to: INDEX, value: STATE, data: dict = None, _at: INDEX = None, _to: INDEX = None):
         super().__init__(at, to, value, _at, _to)
-        if data is None:
-            data = {}
-        self.data: HashableDict = HashableDict(data)
+        self.data: HashableDict = HashableDict(data or {})
 
     def __str__(self):
         childs = []
@@ -53,7 +58,7 @@ class Lemma(Element):
 
     def develop(self: E, case: CASE, item: Union[Token, Lemma]) -> E:
         action, value = case
-        data = HashableDict(self.data)
+        data = copy(self.data)
         if action == INCLUDE:
             return self.__class__(
                 at=self.at,
