@@ -186,6 +186,9 @@ class Branch(RuleUnit[Rule]):
     def new_rule(self, rule: Rule) -> Branch:
         return Branch(self.name, rule, self.priority)
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.name!r}, {self.rule!r}, {self.priority!r})"
+
     def __str__(self):
         return f"{self.name!s}[{self.priority}] : {self.rule!s}"
 
