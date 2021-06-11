@@ -209,7 +209,7 @@ class ActionSelect(Dict[ACTION, TargetSelect]):
             if target_select.nonte_branches:
                 yield target_select.target
 
-    def data(self, func: FUNC, formal: bool = False) -> ActionSelectData:
+    def data(self, func: FUNC, strict_propagator: bool = False) -> ActionSelectData:
         max_priority = max(target_select.priority for target_select in self.values())
         cases = {
             action: target_select.data(func)
@@ -217,7 +217,7 @@ class ActionSelect(Dict[ACTION, TargetSelect]):
             if target_select.priority == max_priority
         }
 
-        if formal and len(cases) != 1:
+        if strict_propagator and len(cases) != 1:
             raise AmbiguityException(cases)
 
         return ActionSelectData(cases=cases)
@@ -236,24 +236,24 @@ class GroupSelect(Dict[Group, ActionSelect]):
         for action_select in self.values():
             yield from action_select.targets
 
-    def data(self, func: FUNC, formal: bool = False) -> GroupSelectData:
+    def data(self, func: FUNC, strict_propagator: bool = False) -> GroupSelectData:
         *cases, default = sorted(self.items())
 
         return GroupSelectData(
             {
-                group: action_select.data(func, formal)
+                group: action_select.data(func, strict_propagator)
                 for group, action_select
                 in cases
             },
-            default[1].data(func, formal)
+            default[1].data(func, strict_propagator)
         )
 
 
 class OriginSelect(Dict[BranchSet, GroupSelect]):
-    def data(self, func: FUNC, formal: bool = False) -> OriginSelectData:
+    def data(self, func: FUNC, strict_propagator: bool = False) -> OriginSelectData:
         return OriginSelectData(
             {
-                func(origin): group_select.data(func, formal)
+                func(origin): group_select.data(func, strict_propagator)
                 for origin, group_select in self.items()
             }
         )
