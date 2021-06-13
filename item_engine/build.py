@@ -1,24 +1,22 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Callable, Iterator, Tuple, Optional, Type, Union, Iterable, FrozenSet, Hashable
 
 from graph37 import Node
-from python_generator import VAR, DEF, ARGS, INT, IF, BLOCK, STR, LIST, IMPORT, \
-    RETURN, YIELD, SWITCH, FSTR, EXCEPTION, MODULE, PACKAGE, STATEMENT, ARG
+from python_generator import *
 
 from .BuilderGraph import BuilderGraph
-from .rules import BranchSet, Branch
+# from .ParserConfig import ParserConfig
 from .constants import ACTION, STATE, NT_STATE, T_STATE
-from .elements import Element
 from .items import Group, Item
+from .rules import BranchSet, Branch
 from .utils import ArgsHashed
 
 DEBUG_GROUP_TO_OUTCOME = False
 
-__all__ = ["Parser", "Engine"]
+__all__ = ["Optimizer"]
 
 
 class AmbiguityException(Exception):
@@ -160,16 +158,19 @@ class TargetSelect:
         else:
             return [T_STATE("!")]
 
-    def _data_valid(self) -> T_STATE:
+    def _data_valid(self, strict_propagator: bool) -> List[T_STATE]:
         valid_branches = [branch for branch in self.valid_branches if branch.priority == self.valid_priority]
+        if not strict_propagator:
+            return [T_STATE(valid_branch.name) for valid_branch in valid_branches]
+
         if len(valid_branches) == 1:
-            return T_STATE(valid_branches[0].name)
+            return [T_STATE(valid_branches[0].name)]
         else:
             if valid_branches:
                 raise AmbiguityException("\ntoo many :\n" + "\n".join(f"-> {b!r}" for b in valid_branches))
             else:
                 if len(self.valid_branches) == 1:
-                    return T_STATE(self.valid_branches[0].name)
+                    return [T_STATE(self.valid_branches[0].name)]
                 raise AmbiguityException("\nall null :\n" + "\n".join(f"-> {b!r}" for b in self.valid_branches))
 
     def _data_error(self, error_mode: ERROR_MODE) -> T_STATE:
@@ -183,15 +184,15 @@ class TargetSelect:
             raise ValueError(error_mode, "invalid error mode")
         return T_STATE("!" + "|".join(sorted(branch.name for branch in error_branches)))
 
-    def data(self, func: FUNC, error_mode: ERROR_MODE = ERROR_MODE.MOST) -> STATE:
+    def data(self, func: FUNC, strict_propagator: bool, error_mode: ERROR_MODE = ERROR_MODE.MOST) -> List[STATE]:
         if self.nonte_branches:
-            return func(self.target)
+            return [func(self.target)]
         elif self.valid_branches:
-            return self._data_valid()
+            return self._data_valid(strict_propagator)
         elif self.error_branches:
-            return self._data_error(error_mode)
+            return [self._data_error(error_mode)]
         else:
-            return T_STATE("!")
+            return [T_STATE("!")]
 
 
 class ActionSelect(Dict[ACTION, TargetSelect]):
@@ -212,7 +213,7 @@ class ActionSelect(Dict[ACTION, TargetSelect]):
     def data(self, func: FUNC, strict_propagator: bool = False) -> ActionSelectData:
         max_priority = max(target_select.priority for target_select in self.values())
         cases = {
-            action: target_select.data(func)
+            action: target_select.data(func, strict_propagator)
             for action, target_select in self.items()
             if target_select.priority == max_priority
         }
@@ -259,38 +260,10 @@ class OriginSelect(Dict[BranchSet, GroupSelect]):
         )
 
 
-class Parser:
-    def __init__(self,
-                 name: str,
-                 branch_set: BranchSet,
-                 input_cls: Type[Element],
-                 output_cls: Type[Element],
-                 group_cls: Type[Group],
-                 skips: List[T_STATE],
-                 reflexive: bool,
-                 formal_inputs: bool,
-                 formal_outputs: bool
-                 ):
-        """
-
-        :param name: The name of the parser, it will be used to name the module
-        :param branch_set: The BranchSet including all the patterns defined in the parser grammar
-        :param input_cls: The type of elements the parser will receive
-        :param output_cls: The type of elements the parser will emit
-        :param skips: The list of element types that must be ignored (commonly used for white space patterns)
-        :param reflexive: Will the parser receive what it emits (used to build recursive grammar)
-        :param formal_inputs: Restrict the inputs to be consecutive
-        :param formal_outputs: Is the parser formal ? If it's the case, any ambiguity will raise a IE_SyntaxError
-        """
-        self.name: str = name
+class Optimizer:
+    def __init__(self, branch_set: BranchSet, group_cls: Type[Group]):
         self.branch_set: BranchSet = branch_set
-        self.input_cls: Type[Element] = input_cls
-        self.output_cls: Type[Element] = output_cls
         self.group_cls: Type[Group] = group_cls
-        self.reflexive: bool = reflexive
-        self.formal_inputs: bool = formal_inputs
-        self.formal_outputs: bool = formal_outputs
-        self.skips: List[T_STATE] = skips
 
         self.branch_sets: List[BranchSet] = [self.branch_set]
         self.origin_select: OriginSelect = OriginSelect()
@@ -311,6 +284,8 @@ class Parser:
             self.origin_select[branch_set] = group_select
             self.include(group_select)
 
+        self.branch_sets = [self.branch_sets[0], *sorted(self.branch_sets[1:])]  # insure stable indexes
+
     def include(self, group_select: GroupSelect) -> None:
         for branch_set in group_select.targets:
             if branch_set.is_terminal:
@@ -329,47 +304,8 @@ class Parser:
     def get_nt_state(self, branch_set: BranchSet) -> NT_STATE:
         return NT_STATE(self.branch_sets.index(branch_set))
 
-    def data(self) -> ParserData:
-        self.branch_sets = [self.branch_sets[0], *sorted(self.branch_sets[1:])]  # insure stable indexes
-
-        return ParserData(
-            name=self.name,
-            input_cls=self.input_cls,
-            output_cls=self.output_cls,
-            formal_inputs=self.formal_inputs,
-            formal_outputs=self.formal_outputs,
-            osd=self.origin_select.data(self.get_nt_state, self.formal_outputs),
-
-            reflexive=self.reflexive,
-            skips=self.skips
-        )
-
-    @property
-    def graph(self):
-        return self.data().graph
-
-
-class Engine:
-    def __init__(self,
-                 name: str,
-                 parsers: List[Parser],
-                 operators: Optional[MODULE] = None
-                 ):
-        assert name.isidentifier()
-        assert not any(parser.name == 'operators' for parser in parsers)
-        self.name: str = name
-        self.parsers: List[Parser] = parsers
-        self.operators: Optional[MODULE] = operators
-
-    def build(self, root: str = os.curdir, allow_overwrite: bool = False) -> None:
-        self.data().code().save(root=root, allow_overwrite=allow_overwrite)
-
-    def data(self) -> EngineData:
-        return EngineData(
-            self.name,
-            *[parser.data() for parser in self.parsers],
-            materials=self.operators
-        )
+    def data(self, strict_propagator: bool) -> OriginSelectData:
+        return self.origin_select.data(self.get_nt_state, strict_propagator)
 
 
 ########################################################################################################################
@@ -378,15 +314,16 @@ class Engine:
 
 
 class ActionSelectData:
-    def __init__(self, cases: Dict[ACTION, STATE]):
-        self.cases: Dict[ACTION, STATE] = cases
+    def __init__(self, cases: Dict[ACTION, List[STATE]]):
+        self.cases: Dict[ACTION, List[STATE]] = cases
 
     def code(self, _item: VAR, formal: bool) -> BLOCK:
         rtype = RETURN if formal else YIELD
 
         return BLOCK(*[
             rtype(ARGS(STR(action), INT(value) if isinstance(value, int) else STR(value)))
-            for action, value in self.cases.items()
+            for action, values in self.cases.items()
+            for value in values
         ])
 
 
@@ -410,158 +347,93 @@ class OriginSelectData:
         return SWITCH(
             cases=[(current.GETATTR("value").EQ(INT(value)), gsd.code(item, formal)) for value, gsd in
                    sorted(self.cases.items())],
-            default=EXCEPTION(FSTR("value = {current.value!r}")).RAISE()
+            default=EXCEPTION(FSTR(f"value = {{{current.name}.value!r}}")).RAISE()
         )
 
-
-class ParserData:
-    def __init__(self,
-                 name: str,
-                 input_cls: Type[Element],
-                 output_cls: Type[Element],
-                 osd: OriginSelectData,
-                 formal_inputs: bool,
-                 formal_outputs: bool,
-
-                 skips: List[str] = None,
-                 reflexive: bool = False
-                 ):
-        self.name: str = name
-        self.osd: OriginSelectData = osd
-        self.input_cls: Type[Element] = input_cls
-        self.output_cls: Type[Element] = output_cls
-        self.formal_inputs: bool = formal_inputs
-        self.formal_outputs: bool = formal_outputs
-
-        self.skips: List[str] = skips or []
-        self.reflexive: bool = reflexive
-
-    def code(self) -> MODULE:
-        current = VAR("current")
-        item = VAR("item")
-
-        rtype = "Tuple[ACTION, STATE]" if self.formal_outputs else "Iterator[Tuple[ACTION, STATE]]"
-
-        from .builders import build_func
-
-        return MODULE(
-            self.name,
-            [
-                IMPORT.FROM("typing", "Tuple"),
-                *([] if self.formal_outputs else [IMPORT.FROM("typing", "Iterator")]),
-                IMPORT.FROM("item_engine", ["ACTION", "STATE"]),
-                IMPORT.FROM(self.input_cls.__module__, self.input_cls.__name__),
-                IMPORT.FROM(self.output_cls.__module__, self.output_cls.__name__),
-                VAR("__all__").ASSIGN(LIST([STR(self.name)])),
-                DEF(
-                    name=f"_{self.name}",
-                    args=ARGS(
-                        current.ARG(t=self.output_cls.__name__),
-                        item.ARG(t=self.input_cls.__name__)
-                    ),
-                    block=self.osd.code(current, item, self.formal_outputs),
-                    t=rtype
-                ),
-                build_func(
-                    name=self.name,
-                    fun=f"_{self.name}",
-                    formal_inputs=self.formal_inputs,
-                    formal_outputs=self.formal_outputs,
-                    reflexive=self.reflexive,
-                    input_cls=self.input_cls,
-                    output_cls=self.output_cls,
-                    skips=self.skips
-                )
-            ])
-
-    @property
-    def graph(self, **config):
-        dag = BuilderGraph(**config, name=self.name)
-
-        branch_set_nodes: Dict[STATE, Node] = {}
-        errors: Dict[T_STATE, Node] = {}
-        valids: Dict[T_STATE, Node] = {}
-
-        def getnode(value: STATE):
-            if isinstance(value, T_STATE):
-                if value.startswith('!'):
-                    if value not in errors:
-                        errors[value] = dag.terminal_error_state(value)
-                    return errors[value]
-                else:
-                    if value not in valids:
-                        valids[value] = dag.terminal_valid_state(value)
-                    return valids[value]
-            else:
-                if value not in branch_set_nodes:
-                    branch_set_nodes[value] = dag.non_terminal_state(value)
-                return branch_set_nodes[value]
-
-        memory = {}
-
-        def make_chain(o: NT_STATE, g: Group, a: ACTION, t: STATE):
-            origin_node = getnode(o)
-            target_node = getnode(t)
-            k1 = (g, a, target_node)
-            if k1 in memory:
-                group_action_node = memory[k1]
-            else:
-                memory[k1] = group_action_node = dag.group_action(g, a)
-                dag.link(group_action_node, target_node)
-
-            k3 = (origin_node, group_action_node)
-            if k3 not in memory:
-                memory[k3] = dag.link(origin_node, group_action_node)
-
-        for origin, gsd in self.osd.cases.items():
-            for group, asd in gsd.cases.items():
-                for action, target in asd.cases.items():
-                    make_chain(origin, group, action, target)
-
-            for action, target in gsd.default.cases.items():
-                make_chain(origin, Group.never(), action, target)
-
-        return dag
-
-
-class EngineData:
-    def __init__(self, name: str, *pds: ParserData, materials: MODULE = None):
-        self.name: str = name
-        self.pds: Tuple[ParserData] = pds
-        self.materials: Optional[MODULE] = materials
-
-    def code(self) -> PACKAGE:
-        imports: List[STATEMENT] = []
-        for parser_data in self.pds:
-            imports.append(IMPORT.FROM("." + parser_data.name, parser_data.name))
-
-        fp = self.pds[0]
-        lp = self.pds[-1]
-
-        res = VAR("src")
-
-        imports.append(IMPORT.FROM(fp.input_cls.__module__, fp.input_cls.__name__))
-        imports.append(IMPORT.FROM(lp.output_cls.__module__, lp.output_cls.__name__))
-
-        for pd in self.pds:
-            res = VAR(pd.name).CALL(res)
-
-        return PACKAGE(
-            self.name,
-            MODULE(
-                '__init__',
-                scope=[
-                    *imports,
-                    IMPORT.FROM("typing", "Iterator"),
-                    IMPORT.FROM(".materials", "*"),
-                    VAR("__all__").ASSIGN(LIST([STR("parse")])),
-                    DEF(
-                        name="parse",
-                        args=ARG("src", t=f"Iterator[{fp.input_cls.__name__}]"),
-                        t=f"Iterator[{lp.output_cls.__name__}]",
-                        block=RETURN(res)
-                    )
-                ]),
-            *([] if self.materials is None else [self.materials]),
-            *[parser.code() for parser in self.pds]
-        )
+#
+# class ParserData:
+#     def __init__(self, name: str, osd: OriginSelectData, config: ParserConfig):
+#         self.name: str = name
+#         self.osd: OriginSelectData = osd
+#         self.config: ParserConfig = config
+#
+#     def build_propagator(self, imports: List[IMPORT.FROM]) -> DEF:
+#         if self.config.strict_propagator:
+#             t = "Tuple[ACTION, STATE]"
+#             imports.append(IMPORT.FROM("item_engine", ["ACTION", "STATE"]))
+#             imports.append(IMPORT.FROM("typing", "Tuple"))
+#         else:
+#             t = "Iterator[Tuple[ACTION, STATE]]"
+#             imports.append(IMPORT.FROM("item_engine", ["ACTION", "STATE"]))
+#             imports.append(IMPORT.FROM("typing", ["Tuple", "Iterator"]))
+#
+#         cur = VAR("cur")
+#         old = VAR("old")
+#
+#         imports.append(IMPORT.TYPE(self.config.input_cls))
+#         imports.append(IMPORT.TYPE(self.config.output_cls))
+#
+#         return DEF(
+#             name=self.config.name + '_propagator',
+#             args=ARGS(
+#                 cur.ARG(t=self.config.output_cls.__name__),
+#                 old.ARG(t=self.config.input_cls.__name__)
+#             ),
+#             block=self.osd.code(cur, old, self.config.strict_propagator),
+#             t=t
+#         )
+#
+#     def code(self) -> MODULE:
+#         imports = []
+#         propagator = self.build_propagator(imports)
+#         function, module = self.config.build(propagator, imports)
+#         return module
+#
+#     @property
+#     def graph(self, **config):
+#         dag = BuilderGraph(**config, name=self.name)
+#
+#         branch_set_nodes: Dict[STATE, Node] = {}
+#         errors: Dict[T_STATE, Node] = {}
+#         valids: Dict[T_STATE, Node] = {}
+#
+#         def getnode(value: STATE):
+#             if isinstance(value, T_STATE):
+#                 if value.startswith('!'):
+#                     if value not in errors:
+#                         errors[value] = dag.terminal_error_state(value)
+#                     return errors[value]
+#                 else:
+#                     if value not in valids:
+#                         valids[value] = dag.terminal_valid_state(value)
+#                     return valids[value]
+#             else:
+#                 if value not in branch_set_nodes:
+#                     branch_set_nodes[value] = dag.non_terminal_state(value)
+#                 return branch_set_nodes[value]
+#
+#         memory = {}
+#
+#         def make_chain(o: NT_STATE, g: Group, a: ACTION, t: STATE):
+#             origin_node = getnode(o)
+#             target_node = getnode(t)
+#             k1 = (g, a, target_node)
+#             if k1 in memory:
+#                 group_action_node = memory[k1]
+#             else:
+#                 memory[k1] = group_action_node = dag.group_action(g, a)
+#                 dag.link(group_action_node, target_node)
+#
+#             k3 = (origin_node, group_action_node)
+#             if k3 not in memory:
+#                 memory[k3] = dag.link(origin_node, group_action_node)
+#
+#         for origin, gsd in self.osd.cases.items():
+#             for group, asd in gsd.cases.items():
+#                 for action, target in asd.cases.items():
+#                     make_chain(origin, group, action, target)
+#
+#             for action, target in gsd.default.cases.items():
+#                 make_chain(origin, Group.never(), action, target)
+#
+#         return dag

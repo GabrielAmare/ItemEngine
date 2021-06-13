@@ -1,0 +1,20 @@
+{
+  "VAR": {"foreground": "#2c68bd"},
+  "STR": {"foreground": "#0f9018"},
+
+  "EXC": {"foreground": "#f2a40f"},
+  "STAR": {"foreground": "#f2a40f"},
+  "COMMENT": {"foreground": "#c9b30a"},
+  "ERROR": {"background": "#d91d09"},
+
+  "AS": {"foreground": "#f2a40f"},
+  "IN": {"foreground": "#f2a40f"},
+  "MATCH": {"foreground": "#f2a40f"},
+
+  "ATversionCOLON": {"foreground": "#c9b30a"},
+
+  "cCOLON": {"foreground": "#5ff514"},
+  "tCOLON": {"foreground": "#5ff514"},
+  "oCOLON": {"foreground": "#5ff514"},
+  "gCOLON": {"foreground": "#5ff514"},
+}

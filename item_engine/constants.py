@@ -3,7 +3,7 @@ from typing import Union, Tuple
 __all__ = [
     "NT_STATE", "T_STATE", "STATE",
     "INDEX", "POSITION",
-    "ACTION", "INCLUDE", "EXCLUDE", "AS", "IN",
+    "ACTION", "INCLUDE", "EXCLUDE", "INCLUDE_AS", "INCLUDE_IN",
     "CASE", "EOF", "INF", "ERROR_PREFIX"
 ]
 
@@ -17,8 +17,8 @@ POSITION = int
 
 INCLUDE: ACTION = "∈"
 EXCLUDE: ACTION = "∉"
-AS: ACTION = "as:{}"
-IN: ACTION = "in:{}"
+INCLUDE_AS: ACTION = "as:{}"
+INCLUDE_IN: ACTION = "in:{}"
 
 CASE = Tuple[ACTION, STATE]
 

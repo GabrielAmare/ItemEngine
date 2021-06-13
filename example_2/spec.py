@@ -12,12 +12,12 @@ not_eof = CharG({CharI(char=EOF)}, True).inc()
 lexer, kws, sym = MakeLexer(
     keywords=[],
     symbols=[
-        '{', '}', '!', '*', '=', '|', '&', '\n', '.', '[', ']', '(', ')'
+        '{', '}', '!', '*', '=', '|', '&', '.', '[', ']', '(', ')', '>'
     ],
     branches={
         "VAR": alpha & alphanum.repeat(0, INF),
         "STR": sq & n_sq.repeat(0, INF) & sq | dq & n_dq.repeat(0, INF) & dq,
-        "WHITESPACE": charset(" \t").inc().repeat(1, INF),
+        "WHITESPACE": charset(" \t\n").inc().repeat(1, INF),
         "COMMENT": charset("#").inc() & (~(charset('\n') | CharG({CharI('EOF')}))).inc().repeat(0, INF)
     }
 )
@@ -32,6 +32,8 @@ grp = GroupMaker({
     S1: [S2, "__AND__"],
 
     S0: [S1, "__OR__"],
+
+    "LINE": ["__OPERATOR__", "__GROUP__"]
 })
 
 parser, operators = MakeParser(
@@ -49,12 +51,15 @@ parser, operators = MakeParser(
 
         "Enum": OP(grp["__LITERAL__"], sym['.'], grp[S2]),
 
-        "Optional": OP(grp['['], grp[S0], grp[']']),
-        "Repeat": OP(grp['('], grp[S0], grp[')']),
+        "Optional": OP(sym['['], grp[S0], sym[']']),
+        "Repeat": OP(sym['('], grp[S0], sym[')']),
 
         "Operator": OP(grp['VAR'], sym['='], grp[S0]),
 
-        "Grammar": ENUM(grp['__OPERATOR__'], sym['\n'])
+        "GroupEnum": ENUM(grp['VAR'], sym['|']),
+        "Group": OP(grp['VAR'], sym['>'], grp["__GROUPENUM__"]),
+
+        "Grammar": ENUM(grp['LINE'])
     },
     branches={
 
@@ -73,7 +78,9 @@ engine = Engine(
             formal_inputs=True,
             formal_outputs=True,
             reflexive=False,
-            skips=["WHITESPACE"]
+            keep_longest=True,
+            keep_consecutive=True,
+            skips=[]  # =["WHITESPACE", "__SEP__"]
         ),
         Parser(
             name='parser',
@@ -84,6 +91,8 @@ engine = Engine(
             formal_inputs=True,
             formal_outputs=False,
             reflexive=True,
+            keep_longest=False,
+            keep_consecutive=False,
             skips=[]
         )
     ],

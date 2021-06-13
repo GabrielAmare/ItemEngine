@@ -1,0 +1,22 @@
+{
+  "versionCOLON": { "foreground": "#c9b30a" },
+  "langCOLON": { "foreground": "#c9b30a" },
+  "whitespaceCOLON": { "foreground": "#c9b30a" },
+
+  "VAR": { "foreground": "#2c68bd" },
+  "STR": { "foreground": "#0f9018" },
+  "EXC": { "foreground": "#f2a40f" },
+  "STAR": { "foreground": "#f2a40f" },
+  "COMMENT": { "foreground": "#c9b30a" },
+  "ERROR": { "background": "#d91d09" },
+
+  "as": { "foreground": "#f2a40f" },
+  "in": { "foreground": "#f2a40f" },
+
+  "WAVE": { "foreground": "red" },
+  "MATCH": { "foreground": "#f2a40f" },
+  "SHARP": { "foreground": "#5ff514" },
+  "DOLLAR": { "foreground": "#5ff514" },
+  "AT": { "foreground": "#5ff514" },
+  "PERCENT": { "foreground": "#5ff514" }
+}

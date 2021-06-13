@@ -1,6 +1,6 @@
 from abc import ABC
 
-from item_engine import Item, Group, Match, ACTION, INCLUDE, EXCLUDE, AS, IN
+from item_engine import Item, Group, Match, ACTION, INCLUDE, EXCLUDE, INCLUDE_AS, INCLUDE_IN
 
 __all__ = ["BaseItem", "BaseGroup"]
 
@@ -16,10 +16,10 @@ class Base:
         return self.match(EXCLUDE)
 
     def include_as(self, key: str) -> Match:
-        return self.match(AS.format(key))
+        return self.match(INCLUDE_AS.format(key))
 
     def include_in(self, key: str) -> Match:
-        return self.match(IN.format(key))
+        return self.match(INCLUDE_IN.format(key))
 
     inc = include
     exc = exclude

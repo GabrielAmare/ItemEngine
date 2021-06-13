@@ -1,6 +1,6 @@
 from typing import Tuple, Union, List, Optional
 
-from item_engine import Group, Match, Branch, All, INF, INCLUDE, AS as AS_, IN as IN_, include
+from item_engine import Group, Match, Branch, All, INF, INCLUDE, INCLUDE_AS as AS_, INCLUDE_IN as IN_, include
 from python_generator import LAMBDA, VAR, IF, STR, BLOCK, ARG, SELF, CLASS, METHODS, DEF, AND, EXPRESSION, RETURN, FSTR, \
     ARGS, IMPORT, EQ
 

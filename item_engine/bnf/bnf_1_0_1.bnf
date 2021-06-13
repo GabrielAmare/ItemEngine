@@ -1,0 +1,25 @@
+Str = {STR !expr}
+Var = {VAR !name}
+
+Match = '{' {VAR !name} '}'
+MatchAs = '{' {VAR !name} ' !' {VAR !key} '}'
+MatchIn = '{' {VAR !name} ' *' {VAR !key} '}'
+
+All = ' '.{Atom_ *args}
+Any = ' | '.{All_ *args}
+Optional = '[' {Any_ !child} ']'
+Repeat = '(' {Any_ !child} ')'
+Enum = {Str !separator} '.' {MatchIn !child}
+
+Charset = 'c:' {VAR !name} ' = ' ' '.{CharsetArg *args}
+Operator = 'o:' {VAR !name} ' = ' {Any_ !rule}
+Group = 'g:' {VAR !name} ' > ' ' | '.{VAR *names}
+
+Grammar = '@version:' {STR !version} '\n' '\n'.{GrammarRule *branches}
+
+CharsetArg > Str | Var
+GrammarRule > Operator | Group | Charset
+
+Atom_ > Str | Match | MatchAs | MatchIn | Enum | Optional | Repeat
+All_ > Atom_ | All
+Any_ > All_ | Any

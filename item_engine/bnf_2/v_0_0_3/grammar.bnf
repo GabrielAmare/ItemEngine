@@ -1,0 +1,35 @@
+@lang:"bnf"
+@version:"0.0.3"
+@whitespace:" \n\t"
+
+o:Str      = {STR !expr}
+o:Var      = {VAR !name}
+
+o:Match    = '{' {VAR !name} '}'
+o:MatchAs  = '{' {VAR !name} ' !' {VAR !key} '}'
+o:MatchIn  = '{' {VAR !name} ' *' {VAR !key} '}'
+
+o:All      = ' '.{Atom_ *args}
+o:Any      = ' | '.{All_ *args}
+o:Optional = '[' {Any_ !child} ']'
+o:Repeat   = '(' {Any_ !child} ')'
+o:Enum     = {Str !separator} '.' {MatchIn !child}
+o:EnumP    = {Str !separator} '^' {MatchIn !child}
+
+o:Charset  = 'c:' {VAR !name} ' = ' ' '.{CharsetArg *args}
+o:Pattern  = 'p:' {VAR !name} ' = ' ' '.{PatternArg *args}
+o:Operator = 'o:' {VAR !name} ' = ' {Any_ !rule}
+o:Group    = 'g:' {VAR !name} ' = ' ' | '.{VAR *names}
+
+o:Grammar  = '@lang:' {STR !lang} '\n'
+             '@version:' {STR !version} '\n'
+             '@whitespace:' {STR !whitespace} '\n'
+             '\n'.{GrammarArg *args}
+
+g:CharsetArg = Str | Var
+g:PatternArg = Str | Var
+g:GrammarArg = Operator | Group | Charset
+
+g:Atom_      = Str | Match | MatchAs | MatchIn | Enum | EnumP | Optional | Repeat
+g:All_       = Atom_ | All
+g:Any_       = All_ | Any

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import Tuple, List, Hashable
+from typing import Tuple, Hashable
 
 from .constants import T_STATE, INDEX, STATE, CASE, NT_STATE, EOF
 from .utils import ArgsHashed
 
-__all__ = ["Element", "OPTIONS", "IE_SyntaxError"]
+__all__ = [
+    "Element", "IE_SyntaxError",
+]
 
 
 class Element(ArgsHashed):
@@ -102,36 +104,7 @@ class Element(ArgsHashed):
 
 
 class IE_SyntaxError(Exception):
-    def __init__(self, cur: Element, old: Element, new: Element):
-        self.cur: Element = cur
-        self.old: Element = old
+    def __init__(self, new: Element, *args, **kwargs):
         self.new: Element = new
-
-
-class OPTIONS:
-    @staticmethod
-    def ordered(elements: List[Element]) -> bool:
-        """Return True when elements are in order, it implies that there's no overlapping"""
-        return all(a.le(b) for a, b in zip(elements, elements[1:]))
-
-    @staticmethod
-    def consecutive(elements: List[Element]) -> bool:
-        """Return True when elements are in order and conscutive, it implies that there's no overlapping"""
-        return all(a.to == b.at for a, b in zip(elements, elements[1:]))
-
-    @staticmethod
-    def ordered_layers(layers: List[List[Element]]) -> bool:
-        """Return True when elements from consecutive layers are in order (for all possible pairs)"""
-        return all(all(a.le(b) for a in A for b in B) for A, B in zip(layers, layers[1:]))
-
-    @staticmethod
-    def simultaneous_end(elements: List[Element]) -> bool:
-        return all(a.to == b.to for a in elements for b in elements)
-
-    @staticmethod
-    def simultaneous_start(elements: List[Element]) -> bool:
-        return all(a.at == b.at for a in elements for b in elements)
-
-    @staticmethod
-    def non_overlaping(elements: List[Element]):
-        return all(not a.ol(b) for a in elements for b in elements if a is not b)
+        self.args = args
+        self.kwargs = kwargs

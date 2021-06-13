@@ -1,0 +1,58 @@
+@lang:"bnf"
+@version:"0.0.8"
+@whitespace:" \n\t"
+c:digits   = '0123456789'
+c:letters  = 'abcdefghijklmnopqrstuvwxyz'
+c:LETTERS  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+c:alpha    = letters LETTERS '_'
+c:alphanum = alpha digits
+c:sq       = "'"
+c:dq       = '"'
+
+p:VAR      = alpha alphanum
+
+o:P_Inv      = '~' {Var !arg}
+o:P_Optional = '?' {P_Inv_ !arg}
+o:P_Repeat   = '*' {P_Inv_ !arg}
+o:P_RepeatP  = '+' {P_Inv_ !arg}
+o:P_All      = ' '^{P_Skip_ *args}
+o:P_Any      = ' | '^{P_All_ *args}
+
+
+g:P_Atom_    = Str | Var
+g:P_Inv_     = P_Inv | P_Atom_
+g:P_Skip_    = P_Optional | P_Repeat | P_RepeatP | P_Inv_
+g:P_All_     = P_All | P_Skip_
+g:P_Any_     = P_Any | P_All_
+
+o:Str      = {STR !expr}
+o:Var      = {VAR !name}
+
+o:Match    = '{' {VAR !name} '}'
+o:MatchAs  = '{' {VAR !name} ' !' {VAR !key} '}'
+o:MatchIn  = '{' {VAR !name} ' *' {VAR !key} '}'
+
+o:All      = ' '^{Atom_ *args}
+o:Any      = ' | '^{All_ *args}
+o:Optional = '[' {Any_ !child} ']'
+o:Repeat   = '(' {Any_ !child} ')'
+o:Enum     = {Str !separator} '.' {MatchIn !child}
+o:EnumP    = {Str !separator} '^' {MatchIn !child}
+
+o:Charset  = 'c:' {VAR !name} ' = ' ' '.{CharsetArg *args}
+o:Pattern  = 'p:' {VAR !name} ' = ' {P_Any_ !arg}
+o:Operator = 'o:' {VAR !name} ' = ' {Any_ !rule}
+o:Group    = 'g:' {VAR !name} ' = ' ' | '^{VAR *names}
+
+o:Grammar  = '@lang:' {STR !lang} '\n'
+             '@version:' {STR !version} '\n'
+             '@whitespace:' {STR !whitespace} '\n'
+             '\n'.{GrammarArg *args}
+
+g:CharsetArg = Str | Var
+g:PatternArg = Str | Var
+g:GrammarArg = Operator | Group | Charset | Pattern
+
+g:Atom_      = Str | Match | MatchAs | MatchIn | Enum | EnumP | Optional | Repeat
+g:All_       = Atom_ | All
+g:Any_       = All_ | Any

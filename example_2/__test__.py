@@ -25,7 +25,7 @@ def get(text: str):
     *results, eof = list(parse(make_characters(text, eof=True)))
     return [build(result) for result in results if result.at == 0 and result.to == eof.to]
 
-def test(text: str, expected: List[Element]):
+def test(text: str, expected: list):
     result = get(text)
     assert expected == result, f"\ntext = {text!r}\nexpected = {expected!r}\nresult   = {result!r}"
 
